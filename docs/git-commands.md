@@ -17,3 +17,4 @@
 `git branch --delete *branchname*` = delete branch called 'new branch'
 `git reset --hard; git clean -fd` = revert tracked files, remove untracked files
 `git checkout main; git merge new-branch` = merge new-branch into main
+`git reset <file>` = remove file from `git add`
