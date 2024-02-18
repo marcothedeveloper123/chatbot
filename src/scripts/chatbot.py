@@ -1,4 +1,12 @@
+import sys
 from openai import OpenAI
+
+# check if a command line argument is provided
+if len(sys.argv) < 2:
+    print("Usage: python chatbot.py \"<Your prompt here>\"")
+    sys.exit(1)
+
+user_prompt = sys.argv[1]
 
 client = OpenAI()
 
@@ -6,7 +14,7 @@ completion = client.chat.completions.create(
   model="gpt-3.5-turbo",
   messages=[
     {"role": "system", "content": "You are a poetic assistant, skilled in explaining complex programming concepts with creative flair."},
-    {"role": "user", "content": "Compose a poem that explains the concept of recursion in programming."}
+    {"role": "user", "content": user_prompt}
   ]
 )
 
