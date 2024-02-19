@@ -4,6 +4,11 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
+# check if a command line argument is provided
+if len(sys.argv) < 2:
+    print('Usage: python chatbot.py "<Your prompt here>"')
+    sys.exit(1)
+
 # ANSI codes to prettify the terminal text
 YELLOW = "\033[33m"
 GREEN = "\033[32m"
@@ -60,3 +65,17 @@ while True:
     except (EOFError, KeyboardInterrupt):
         print(f"\n{RESET}Exiting...")
         break  # exit the loop
+
+completion = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {
+            "role": "system",
+            "content": "You are a poetic assistant, skilled in explaining complex programming concepts with creative flair.",
+        },
+        {"role": "user", "content": user_prompt},
+    ],
+)
+
+print(completion.choices[0].message.content)
+
