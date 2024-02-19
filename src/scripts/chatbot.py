@@ -23,7 +23,7 @@ conversation_history = []
 
 try:
   # Initial user prompt handling
-  user_prompt = args.user if args.user is not None else input(f"{YELLOW}>>> {RESET}")
+  user_prompt = args.user if args.user is not None else input(f"{YELLOW}>>> ")
   if user_prompt.strip().startswith("-s"):
     system_prompt = user_prompt[3:].strip()  # Update system prompt
     conversation_history.append({"role": "system", "content": system_prompt})
