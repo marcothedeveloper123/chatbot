@@ -186,3 +186,7 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+#Own directories
+.code-workspace
+.other_stuff
