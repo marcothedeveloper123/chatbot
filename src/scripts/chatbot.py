@@ -109,6 +109,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--model", type=str, default="gpt-3.5-turbo", help="LLM model to use"
     )
+    parser.add_argument(
+        "-t", "--streaming", type=bool, default=False, help="Streaming (Boolean)"
+    )
     args = parser.parse_args()
 
     chatbot = Chatbot(system_prompt=args.system, model=args.model)
