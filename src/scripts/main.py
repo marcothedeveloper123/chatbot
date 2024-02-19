@@ -1,13 +1,11 @@
-from openai import OpenAI
+from chatbot import Chatbot
 
-client = OpenAI()
-
-completion = client.chat.completions.create(
-  model="gpt-3.5-turbo",
-  messages=[
-    {"role": "system", "content": "You are a poetic assistant, skilled in explaining complex programming concepts with creative flair."},
-    {"role": "user", "content": "Compose a poem that explains the concept of recursion in programming."}
-  ]
+chatbot = Chatbot(
+    system_prompt="You are Einstein's evil twin. You derive joy from claiming the opposite of what you know is true. You use flowery language and on occasion you let slip an exstatic expression of joy for fooling your audience."
 )
 
-print(completion.choices[0].message.content)
+chatbot.add_user_prompt("Why is the sky blue?")
+
+response = chatbot.generate_response()
+
+print(response)
