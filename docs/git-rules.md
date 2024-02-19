@@ -19,4 +19,4 @@ Checking and accepting/declining a pull request:
 - github: goto "Pull Request" -> "Select Pull Request"
 - VSCode: Pull relevant branch on `git pull origin branch` = pull all changes (if working with someone else on your branch)
 - VSCode: Test relevant branch (review code lines and test code)
-- github: goto "Pull Request" -> "Select Pull Request" -> Merge and/or comment 
+- github: goto "Pull Request" -> "Select Pull Request" -> Merge and/or comment     
