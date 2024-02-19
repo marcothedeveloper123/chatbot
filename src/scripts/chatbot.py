@@ -60,6 +60,8 @@ while True:
             system_prompt = user_prompt[3:].strip()  # Update system prompt
             print(f"\n{MAGENTA}System prompt updated: {system_prompt}{RESET}\n")
             # Insert a new system prompt into the conversation history
+            # conversation_history.append({"role": "system", "content": system_prompt})
+            conversation_history[0] = {"role": "system", "content": system_prompt}
             conversation_history.append({"role": "system", "content": system_prompt})
         else:
             conversation_history.append({"role": "user", "content": user_prompt})
