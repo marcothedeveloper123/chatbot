@@ -12,10 +12,12 @@ class Chatbot:
         self,
         system_prompt="You are a poetic assistant, skilled in explaining complex programming concepts with creative flair.",
         model="gpt-3.5-turbo",
+        streaming=False,
     ):
         self.client = OpenAI()
         self.system_prompt = system_prompt
         self.model = model
+        self.streaming = streaming
         self.conversation_history = []
         self.colors = {
             "YELLOW": "\033[33m" if __name__ == "__main__" else "",
@@ -49,18 +51,28 @@ class Chatbot:
             )
 
     def generate_response(self):
-        response = self.client.chat.completions.create(
-            model=self.model, messages=self.conversation_history
-        )
-        response_text = response.choices[0].message.content
-        self.conversation_history.append(
-            {"role": "assistant", "content": response_text}
-        )
-
-        if __name__ != "__main__":
-            return response_text
+        if self.streaming:
+            stream = self.client.chat.completions.create(
+                model=self.model,
+                messages=self.conversation_history,
+                stream=True,
+            )
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    response_text = chunk.choices[0].delta.content
+                    self.conversation_history.append(
+                        {"role": "assistant", "content": response_text}
+                    )
+                    yield response_text
         else:
-            print(f"\n{self.colors['BLUE']}{response_text}{self.colors['RESET']}\n")
+            response = self.client.chat.completions.create(
+                model=self.model, messages=self.conversation_history
+            )
+            response_text = response.choices[0].message.content
+            self.conversation_history.append(
+                {"role": "assistant", "content": response_text}
+            )
+            return response_text
 
     def _run(self):
         try:
@@ -85,9 +97,21 @@ class Chatbot:
                         print(
                             f"\n{self.colors['MAGENTA']}System prompt updated: {self.system_prompt}{self.colors['RESET']}\n"
                         )
+                        print(f"{self.colors['RESET']}\n")
                 else:
                     self.add_user_prompt(user_prompt)
-                    self.generate_response()
+                    if chatbot.streaming:
+                        print(f"{chatbot.colors['BLUE']}")
+                        for response_text in chatbot.generate_response():
+                            print(
+                                response_text,
+                                end="",
+                                flush=True,
+                            )
+                        print(f"{chatbot.colors['BLUE']}\n")
+                    else:
+                        response_text = chatbot.generate_response()
+                        print(response_text)
         except (EOFError, KeyboardInterrupt):
             print(f"\n{self.colors['RESET']}Exiting...")
 
@@ -110,15 +134,28 @@ if __name__ == "__main__":
         "-m", "--model", type=str, default="gpt-3.5-turbo", help="LLM model to use"
     )
     parser.add_argument(
-        "-t", "--streaming", type=bool, default=False, help="Streaming (Boolean)"
+        "-t", "--streaming", action="store_true", help="Enable streaming mode"
     )
     args = parser.parse_args()
 
-    chatbot = Chatbot(system_prompt=args.system, model=args.model)
+    chatbot = Chatbot(
+        system_prompt=args.system, model=args.model, streaming=args.streaming
+    )
     try:
         if args.user:
             user_prompt = chatbot.add_user_prompt(args.user)
-            chatbot.generate_response()
+            if chatbot.streaming:
+                print(f"{chatbot.colors['BLUE']}")
+                for response_text in chatbot.generate_response():
+                    print(
+                        response_text,
+                        end="",
+                        flush=True,
+                    )
+                print(f"{chatbot.colors['RESET']}\n")
+            else:
+                response_text = chatbot.generate_response()
+                print(response_text)
     except (EOFError, KeyboardInterrupt):
         print(f"\n{chatbot.colors['RESET']}Exiting...")
     chatbot._run()
