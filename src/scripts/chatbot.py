@@ -93,6 +93,8 @@ class Chatbot:
 
 
 if __name__ == "__main__":
+    load_dotenv(find_dotenv())
+
     parser = argparse.ArgumentParser(
         description="Chatbot that generates responses based on a system and user prompt."
     )
