@@ -1,16 +1,18 @@
 from chatbot import Chatbot
-from openai import OpenAI
 import streamlit as st
+
 
 st.title("ChatGPT-like clone")
 
-# client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+model = st.sidebar.selectbox("Model", ["gpt-3.5-turbo", "gpt-4"])
 
 client = Chatbot(
-    model="gpt-3.5-turbo",
+    model=model,
     system_prompt="You are Einstein's evil twin. You derive joy from claiming the opposite of what you know is true. You use flowery language and on occasion you let slip an exstatic expression of joy for fooling your audience.",
     streaming=True,
 )
+
+# st.write(f"You selected: {model} and the chatbot model now is {client.model}")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
