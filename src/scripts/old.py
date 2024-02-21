@@ -103,40 +103,54 @@ class Chatbot:
             )
 
     def generate_response(self):
-        # Non-streaming mode: return the complete response as a string
-        response = self.client.chat.completions.create(
-            model=self.model, messages=self.conversation_history
-        )
-        response_text = response.choices[0].message.content
-        self.conversation_history.append(
-            {
-                "role": "assistant",
-                "content": response_text,
-            }
-        )
-        return response_text
-
-    def stream_response(self):
-        # Streaming mode: yield each response part as it arrives
-        stream = self.client.chat.completions.create(
-            model=self.model,
-            messages=self.conversation_history,
-            stream=True,
-        )
-        for chunk in stream:
-            if chunk.choices[0].delta.content is not None:
-                response_text = chunk.choices[0].delta.content
-                self.conversation_history.append(
-                    {
-                        "role": "assistant",
-                        "content": response_text,
-                    }
-                )
-                yield response_text
+        """
+        Here we call the LLM. May still need to adapt this for the Ollama connection.
+        """
+        print("generate_response is being called")
+        if self.streaming:
+            """
+            Streaming responses require a generator object that the caller can iterate
+            through. We return every token as it arrives; the caller will have a `for`
+            loop that delivers the tokens to the UI.
+            """
+            print("We are streaming!")
+            stream = self.client.chat.completions.create(  # set up the response stream
+                model=self.model,
+                messages=self.conversation_history,
+                stream=True,
+            )
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    response_text = chunk.choices[
+                        0
+                    ].delta.content  # extract the response token
+                    self.conversation_history.append(
+                        {
+                            "role": "assistant",
+                            "content": response_text,
+                        }  # maintain conversation history
+                    )
+                    yield response_text  # this generates the stream of responses to the caller
+        else:  # here we only return the full response
+            print("we are not streaming")
+            response = self.client.chat.completions.create(  # request the full response
+                model=self.model, messages=self.conversation_history
+            )
+            response_text = response.choices[
+                0
+            ].message.content  # extract the response text
+            self.conversation_history.append(
+                {
+                    "role": "assistant",
+                    "content": response_text,
+                }  # maintain conversation history
+            )
+            return response_text
 
     def _run(self):  # we only call this from the command line
         try:
             while True:
+                print(f"Streaming is: {self.streaming}")
                 style = Style.from_dict(
                     {
                         "prompt": "ansiyellow",  # Style for the prompt text
@@ -177,7 +191,7 @@ class Chatbot:
                         for (
                             response_text
                         ) in (
-                            chatbot.stream_response()
+                            chatbot.generate_response()
                         ):  # here, `generate_response()` returns a generator object
                             print(
                                 response_text,
@@ -189,9 +203,7 @@ class Chatbot:
                         response_text = (
                             chatbot.generate_response()
                         )  # here, `generate_response` returns a string
-                        print(
-                            f"\n{self.colors['BLUE']}{response_text}{self.colors['RESET']}\n"
-                        )
+                        print(response_text)
         except (
             EOFError,
             KeyboardInterrupt,
@@ -247,7 +259,7 @@ if (
             )  # `-u` in the command line passes a user prompt
             if chatbot.streaming:
                 print(f"{chatbot.colors['BLUE']}")
-                for response_text in chatbot.stream_response():
+                for response_text in chatbot.generate_response():
                     print(
                         response_text,
                         end="",
@@ -256,9 +268,7 @@ if (
                 print(f"{chatbot.colors['RESET']}\n")
             else:
                 response_text = chatbot.generate_response()
-                print(
-                    f"\n{chatbot.colors['BLUE']}{response_text}{chatbot.colors['RESET']}\n"
-                )
+                print(response_text)
     except (
         EOFError,
         KeyboardInterrupt,
