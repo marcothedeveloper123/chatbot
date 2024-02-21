@@ -1,4 +1,4 @@
-from chatbot import Chatbot
+from scripts.old.old import Chatbot
 from prompt_toolkit import prompt, ANSI
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.styles import Style
