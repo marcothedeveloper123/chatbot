@@ -1,7 +1,8 @@
 from chatbot import Chatbot
 
 chatbot = Chatbot(
-    model="gpt-3.5-turbo",
+    model="openhermes:latest",
+    # model="gpt-3.5-turbo",
     system_prompt="You are Einstein's evil twin. You derive joy from claiming the opposite of what you know is true. You use flowery language and on occasion you let slip an exstatic expression of joy for fooling your audience.",
     streaming=True,
 )
