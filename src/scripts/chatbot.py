@@ -27,8 +27,10 @@ class Chatbot:
         self.system_prompt = system_prompt
         self.model = (
             model  # default is "gpt-3.5-turbo", can be set in the Chatbot parameters
+            # "openhermes:latest"
         )
-        self.streaming = streaming
+        # self.streaming = streaming
+        self.streaming = True
         self.conversation_history = []  # necessary to implement chat memory
         self.colors = {
             "YELLOW": "\033[33m" if __name__ == "__main__" else "",
@@ -71,7 +73,7 @@ class Chatbot:
         if self.model in self.models_cache["openai"]:
             self.client = OpenAI()
         elif self.model in self.models_cache["ollama"]:
-            self.client = None  # Ollama does not require a dedicated client
+            self.client = "Ollama"
         else:
             raise ValueError(
                 "The specified model is not available in OpenAI or Ollama models."
@@ -104,10 +106,15 @@ class Chatbot:
 
     def generate_response(self):
         # Non-streaming mode: return the complete response as a string
-        response = self.client.chat.completions.create(
-            model=self.model, messages=self.conversation_history
-        )
-        response_text = response.choices[0].message.content
+        if isinstance(self.client, OpenAI):
+            response = self.client.chat.completions.create(
+                model=self.model, messages=self.conversation_history
+            )
+            response_text = response.choices[0].message.content
+        elif self.client == "Ollama":
+            response = ollama.chat(model=self.model, messages=self.conversation_history)
+            response_text = response["messages"]["content"]
+
         self.conversation_history.append(
             {
                 "role": "assistant",
@@ -117,22 +124,33 @@ class Chatbot:
         return response_text
 
     def stream_response(self):
+        print(f"streaming from {self.client}")
         # Streaming mode: yield each response part as it arrives
-        stream = self.client.chat.completions.create(
-            model=self.model,
-            messages=self.conversation_history,
-            stream=True,
-        )
+        if isinstance(self.client, OpenAI):
+            stream = self.client.chat.completions.create(
+                model=self.model,
+                messages=self.conversation_history,
+                stream=True,
+            )
+        elif self.client == "Ollama":
+            stream = ollama.chat(
+                model=self.model, messages=self.conversation_history, stream=True
+            )
+
         for chunk in stream:
-            if chunk.choices[0].delta.content is not None:
-                response_text = chunk.choices[0].delta.content
-                self.conversation_history.append(
-                    {
-                        "role": "assistant",
-                        "content": response_text,
-                    }
-                )
-                yield response_text
+            if isinstance(self.client, OpenAI):
+                if chunk.choices[0].delta.content is not None:
+                    response_text = chunk.choices[0].delta.content
+            elif self.client == "Ollama":
+                if chunk["message"]["content"] is not None:
+                    response_text = chunk["message"]["content"]
+            self.conversation_history.append(
+                {
+                    "role": "assistant",
+                    "content": response_text,
+                }
+            )
+            yield response_text
 
     def _run(self):  # we only call this from the command line
         try:
@@ -184,14 +202,13 @@ class Chatbot:
                                 end="",  # if we do this, the `print` command will keep printing on the same line
                                 flush=True,  # flush the output buffer after each print to ensure immediate display
                             )
-                        print(f"{chatbot.colors['BLUE']}\n")
+                        print(f"{chatbot.colors['BLUE']}")
                     else:
                         response_text = (
                             chatbot.generate_response()
                         )  # here, `generate_response` returns a string
-                        print(
-                            f"\n{self.colors['BLUE']}{response_text}{self.colors['RESET']}\n"
-                        )
+                        print(f"\n{self.colors['BLUE']}{response_text}")
+                    print(f"{self.colors['RESET']}\n")
         except (
             EOFError,
             KeyboardInterrupt,
