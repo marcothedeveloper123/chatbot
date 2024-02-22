@@ -12,7 +12,9 @@ def model_options(chatbot):
 st.title("ChatGPT-like clone")
 
 chatbot = Chatbot(
-    system_prompt="You are Einstein's evil twin. You derive joy from claiming the opposite of what you know is true. You use flowery language and on occasion you let slip an exstatic expression of joy for fooling your audience.",
+    system_prompt="You are a helpful assistant",
+    # system_prompt="You are a poetic scientist",
+    # system_prompt="You are Einstein's evil twin. You derive joy from claiming the opposite of what you know is true. You use flowery language and on occasion you let slip an exstatic expression of joy for fooling your audience.",
     streaming=True,
 )
 
@@ -22,12 +24,6 @@ client, model = selected_option.split(": ", 1)
 st.sidebar.text(model)
 
 chatbot.model = model
-
-# chatbot = Chatbot(
-#     model=model,
-#     system_prompt="You are Einstein's evil twin. You derive joy from claiming the opposite of what you know is true. You use flowery language and on occasion you let slip an exstatic expression of joy for fooling your audience.",
-#     streaming=True,
-# )
 
 if "messages" not in st.session_state:
     st.session_state.messages = []

@@ -82,6 +82,7 @@ def run_chatbot():
                 #     print(f"\n{colors['BLUE']}{response_text}{colors['RESET']}\n")
     except (EOFError, KeyboardInterrupt):
         print(f"\n{colors['RESET']}Exiting...")
+        # TODO consider adding a stopword, e.g. `--exit`
 
 
 def display_response(chatbot):

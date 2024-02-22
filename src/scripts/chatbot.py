@@ -68,13 +68,16 @@ class OllamaClient(ChatClient):
 class Chatbot:
     def __init__(
         self,
-        system_prompt="You are a poetic assistant, skilled in explaining complex programming concepts with creative flair.",
+        # system_prompt="You are a poetic assistant, skilled in explaining complex programming concepts with creative flair.",
+        system_prompt="You are a helpful assistant.",
         model="gpt-3.5-turbo",
         streaming=False,
     ):
         self.system_prompt = system_prompt
         self.streaming = streaming
-        self.conversation_history = []
+        self.conversation_history = (
+            []
+        )  # TO DO deal with context window (model dependent!)
         # self.history = InMemoryHistory()
         self._model = None
         self.models_cache = {}
@@ -97,15 +100,6 @@ class Chatbot:
         if self._model != value:
             self._model = value
             self.init_client()
-        # Check if the model is in the OpenAI cache
-        # if value in self.models_cache["openai"]:
-        #     self.client = OpenAIClient()
-        # elif value in self.models_cache["ollama"]:
-        #     self.client = OllamaClient()
-        # else:
-        #     raise ValueError(
-        #         f"The model `{value}` is not available in OpenAI or Ollama models."
-        #     )
 
     def init_client(self):
         if self._model:
@@ -162,6 +156,7 @@ class Chatbot:
         at the very start of the conversation. Not sure if this is the best way.
         """
         self.system_prompt = new_prompt
+        self.conversation_history[0] = {"role": "system", "content": self.system_prompt}
         self.conversation_history.append(
             {"role": "system", "content": self.system_prompt}
         )
