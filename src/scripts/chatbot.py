@@ -153,7 +153,7 @@ class Chatbot:
     def update_system_prompt(self, new_prompt):
         """
         Enables the user to change the system prompt. We do this by replacing the system prompt
-        at the very start of the conversation. Not sure if this is the best way.
+        at the very start of the conversation, as well as appending it to the end of the conversation.
         """
         self.system_prompt = new_prompt
         self.conversation_history[0] = {"role": "system", "content": self.system_prompt}

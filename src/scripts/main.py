@@ -46,14 +46,6 @@ def run_chatbot():
     if args.user:
         chatbot.add_user_prompt(args.user)
         display_response(chatbot)
-        # print(f"{colors['BLUE']}")
-        # if chatbot.streaming:
-        #     for response_text in chatbot.stream_response():
-        #         print(response_text, end="", flush=True)
-        # else:
-        #     response_text = chatbot.generate_response()
-        #     print(f"{response_text}")
-        # print(f"{colors['RESET']}\n")
         return
 
     try:
