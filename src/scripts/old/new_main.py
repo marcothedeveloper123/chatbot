@@ -1,4 +1,4 @@
-from chatbot import Chatbot
+from scripts.old.old import Chatbot
 from prompt_toolkit import prompt, ANSI
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.styles import Style
@@ -46,6 +46,14 @@ def run_chatbot():
     if args.user:
         chatbot.add_user_prompt(args.user)
         display_response(chatbot)
+        # print(f"{colors['BLUE']}")
+        # if chatbot.streaming:
+        #     for response_text in chatbot.stream_response():
+        #         print(response_text, end="", flush=True)
+        # else:
+        #     response_text = chatbot.generate_response()
+        #     print(f"{response_text}")
+        # print(f"{colors['RESET']}\n")
         return
 
     try:
@@ -74,7 +82,6 @@ def run_chatbot():
                 #     print(f"\n{colors['BLUE']}{response_text}{colors['RESET']}\n")
     except (EOFError, KeyboardInterrupt):
         print(f"\n{colors['RESET']}Exiting...")
-        # TODO consider adding a stopword, e.g. `--exit`
 
 
 def display_response(chatbot):

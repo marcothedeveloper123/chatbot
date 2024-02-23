@@ -1,31 +1,133 @@
-from prompt_toolkit import prompt
-from prompt_toolkit.history import InMemoryHistory
-from prompt_toolkit import ANSI
-from prompt_toolkit.styles import Style
-import argparse
-from openai import OpenAI
-from dotenv import load_dotenv, find_dotenv
+from abc import ABC, abstractmethod
+
+
+class ChatClient(ABC):
+    """
+    This is an abstract class, a kind of template for LLM client services such as
+    OpenAI and Ollama. Every service will have its own implementation of this
+    template.
+    """
+
+    @abstractmethod
+    def list_models(self):  # what models does the service offer?
+        pass
+
+    @abstractmethod
+    def generate_response(self, model, conversation_history):
+        """Generate a non-streaming response"""
+        pass
+
+    @abstractmethod
+    def stream_response(self, model, conversation_history):  #
+        """Generate a streaming response"""
+        pass
+
+
+class OpenAIClient(ChatClient):
+    def __init__(self):
+        from openai import OpenAI
+
+        self.client = OpenAI()
+
+    def list_models(self):
+        models = self.client.models.list()
+        return [model.id for model in models]
+
+    def generate_response(self, model, conversation_history):
+        response = self.client.chat.completions.create(
+            model=model, messages=conversation_history
+        )
+        return response.choices[0].message.content
+
+    def stream_response(self, model, conversation_history):
+        stream = self.client.chat.completions.create(
+            model=model, messages=conversation_history, stream=True
+        )
+        for chunk in stream:
+            if chunk.choices[0].delta.content is not None:
+                yield chunk.choices[0].delta.content
+
+
+class OllamaClient(ChatClient):
+    def __init__(self):
+        try:
+            import ollama
+
+            self.client = ollama
+        except Exception as e:
+            self.client = None
+
+    def list_models(self):
+        if not self.client:
+            return []  # Ollama not available
+        try:
+            models = self.client.list()
+            return [model["name"] for model in models["models"]]
+        except Exception as e:
+            return []
+
+    def generate_response(self, model, conversation_history):
+        response = self.client.chat(model=model, messages=conversation_history)
+        return response["message"]["content"]
+
+    def stream_response(self, model, conversation_history):
+        stream = self.client.chat(
+            model=model, messages=conversation_history, stream=True
+        )
+        for chunk in stream:
+            if chunk["message"]["content"] is not None:
+                yield chunk["message"]["content"]
 
 
 class Chatbot:
     def __init__(
         self,
-        system_prompt="You are a poetic assistant, skilled in explaining complex programming concepts with creative flair.",
+        # system_prompt="You are a poetic assistant, skilled in explaining complex programming concepts with creative flair.",
+        system_prompt="You are a helpful assistant.",
         model="gpt-3.5-turbo",
+        streaming=False,
     ):
-        self.client = OpenAI()
         self.system_prompt = system_prompt
+        self.streaming = streaming
+        self.conversation_history = (
+            []
+        )  # TO DO deal with context window (model dependent!)
+        # self.history = InMemoryHistory()
+        self._model = None
+        self.models_cache = {}
+        self.client = None
+        self.init_models_cache()
+        # self.init_client()
         self.model = model
-        self.conversation_history = []
-        self.colors = {
-            "YELLOW": "\033[33m" if __name__ == "__main__" else "",
-            "GREEN": "\033[32m" if __name__ == "__main__" else "",
-            "MAGENTA": "\033[35m" if __name__ == "__main__" else "",
-            "BLUE": "\033[34m" if __name__ == "__main__" else "",
-            "RESET": "\033[0m" if __name__ == "__main__" else "",
-        }
-        self.history = InMemoryHistory()
         self.init_conversation()
+
+    def init_models_cache(self):
+        self.models_cache["openai"] = OpenAIClient().list_models()
+        try:
+            self.models_cache["ollama"] = OllamaClient().list_models()
+        except Exception as e:
+            self.models_cache["ollama"] = []
+
+    @property
+    def model(self):
+        return self._model
+
+    @model.setter
+    def model(self, value):
+        if self._model != value:
+            self._model = value
+            self.init_client()
+
+    def init_client(self):
+        if self._model:
+            if self._model in self.models_cache["openai"]:
+                self.client = OpenAIClient()
+            elif self._model in self.models_cache["ollama"]:
+                self.client = OllamaClient()
+            else:
+                raise ValueError(
+                    "The specified model is not available in OpenAI or Ollama models."
+                )
 
     def init_conversation(self, user_prompt=None):
         self.conversation_history.append(
@@ -34,88 +136,44 @@ class Chatbot:
         if user_prompt:
             self.conversation_history.append({"role": "user", "content": user_prompt})
 
+    def generate_response(self):
+        if not self.streaming:
+            response_text = self.client.generate_response(
+                self.model, self.conversation_history
+            )
+            self.conversation_history.append(
+                {"role": "assistant", "content": response_text}
+            )
+            return response_text
+        else:
+            raise NotImplementedError(
+                "Non-streaming mode is required for generate_response method."
+            )
+
+    def stream_response(self):
+        if self.streaming:
+            for response_text in self.client.stream_response(
+                self.model, self.conversation_history
+            ):
+                self.conversation_history.append(
+                    {"role": "assistant", "content": response_text}
+                )
+                yield response_text
+        else:
+            raise NotImplementedError(
+                "Streaming mode is required for stream_response method."
+            )
+
     def add_user_prompt(self, user_prompt):
         self.conversation_history.append({"role": "user", "content": user_prompt})
-        self.history.append_string(user_prompt)
 
     def update_system_prompt(self, new_prompt):
+        """
+        Enables the user to change the system prompt. We do this by replacing the system prompt
+        at the very start of the conversation, as well as appending it to the end of the conversation.
+        """
         self.system_prompt = new_prompt
+        self.conversation_history[0] = {"role": "system", "content": self.system_prompt}
         self.conversation_history.append(
             {"role": "system", "content": self.system_prompt}
         )
-        if __name__ == "__main__":
-            print(
-                f"{self.colors['MAGENTA']}System prompt updated: {self.system_prompt}{self.colors['RESET']}"
-            )
-
-    def generate_response(self):
-        response = self.client.chat.completions.create(
-            model=self.model, messages=self.conversation_history
-        )
-        response_text = response.choices[0].message.content
-        self.conversation_history.append(
-            {"role": "assistant", "content": response_text}
-        )
-
-        if __name__ != "__main__":
-            return response_text
-        else:
-            print(f"\n{self.colors['BLUE']}{response_text}{self.colors['RESET']}\n")
-
-    def _run(self):
-        try:
-            while True:
-                style = Style.from_dict(
-                    {
-                        "prompt": "ansiyellow",  # Style for the prompt text
-                        "": "ansiyellow",  # Style for the default (user input) text
-                    }
-                )
-                user_prompt = prompt(
-                    ANSI(f"{self.colors['YELLOW']}>>> "),
-                    history=chatbot.history,
-                    style=style,
-                )
-                if user_prompt.startswith("-s"):
-                    self.system_prompt = user_prompt[3:].strip()
-                    self.conversation_history.append(
-                        {"role": "system", "content": self.system_prompt}
-                    )
-                    if __name__ == "__main__":
-                        print(
-                            f"\n{self.colors['MAGENTA']}System prompt updated: {self.system_prompt}{self.colors['RESET']}\n"
-                        )
-                else:
-                    self.add_user_prompt(user_prompt)
-                    self.generate_response()
-        except (EOFError, KeyboardInterrupt):
-            print(f"\n{self.colors['RESET']}Exiting...")
-
-
-if __name__ == "__main__":
-    load_dotenv(find_dotenv())
-
-    parser = argparse.ArgumentParser(
-        description="Chatbot that generates responses based on a system and user prompt."
-    )
-    parser.add_argument(
-        "-s",
-        "--system",
-        type=str,
-        default="You are a poetic assistant, skilled in explaining complex programming concepts with creative flair.",
-        help="System prompt",
-    )
-    parser.add_argument("-u", "--user", type=str, default=None, help="User prompt")
-    parser.add_argument(
-        "-m", "--model", type=str, default="gpt-3.5-turbo", help="LLM model to use"
-    )
-    args = parser.parse_args()
-
-    chatbot = Chatbot(system_prompt=args.system, model=args.model)
-    try:
-        if args.user:
-            user_prompt = chatbot.add_user_prompt(args.user)
-            chatbot.generate_response()
-    except (EOFError, KeyboardInterrupt):
-        print(f"\n{chatbot.colors['RESET']}Exiting...")
-    chatbot._run()

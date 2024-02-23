@@ -18,3 +18,11 @@
 `git reset --hard; git clean -fd` = revert tracked files, remove untracked files
 `git checkout main; git merge new-branch` = merge new-branch into main
 `git reset <file>` = remove file from `git add`
+
+## set up a git repository
+1. `git init` = initialize project to use git
+
+## rename the current branch
+1. `git branch -m new-branch-name` = rename the current branch
+2. `git push origin --delete old-branch-name` = delete the remote branch with the old name
+3. `git push origin -u new-branch-name` = push the local branch with the new name to the origin repository
