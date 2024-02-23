@@ -2,8 +2,14 @@ from abc import ABC, abstractmethod
 
 
 class ChatClient(ABC):
+    """
+    This is an abstract class, a kind of template for LLM client services such as
+    OpenAI and Ollama. Every service will have its own implementation of this
+    template.
+    """
+
     @abstractmethod
-    def list_models(self):
+    def list_models(self):  # what models does the service offer?
         pass
 
     @abstractmethod
@@ -12,7 +18,7 @@ class ChatClient(ABC):
         pass
 
     @abstractmethod
-    def stream_response(self, model, conversation_history):
+    def stream_response(self, model, conversation_history):  #
         """Generate a streaming response"""
         pass
 
@@ -44,13 +50,21 @@ class OpenAIClient(ChatClient):
 
 class OllamaClient(ChatClient):
     def __init__(self):
-        import ollama
+        try:
+            import ollama
 
-        self.client = ollama
+            self.client = ollama
+        except Exception as e:
+            self.client = None
 
     def list_models(self):
-        models = self.client.list()
-        return [model["name"] for model in models["models"]]
+        if not self.client:
+            return []  # Ollama not available
+        try:
+            models = self.client.list()
+            return [model["name"] for model in models["models"]]
+        except Exception as e:
+            return []
 
     def generate_response(self, model, conversation_history):
         response = self.client.chat(model=model, messages=conversation_history)
@@ -89,7 +103,10 @@ class Chatbot:
 
     def init_models_cache(self):
         self.models_cache["openai"] = OpenAIClient().list_models()
-        self.models_cache["ollama"] = OllamaClient().list_models()
+        try:
+            self.models_cache["ollama"] = OllamaClient().list_models()
+        except Exception as e:
+            self.models_cache["ollama"] = []
 
     @property
     def model(self):
