@@ -1,0 +1,20 @@
+credentials:
+  usernames:
+    bbrand:
+      email: bbrand@gmx.net
+      logged_in: False # Will be managed automatically
+      name: Bastian Brand
+      password: password # Will be hashed automatically
+    jvkameke:
+      email: juliane.vonkameke@arix-bi.com
+      logged_in: False # Will be managed automatically
+      name: Juliane von Kameke
+      password: password # Will be hashed automatically
+cookie:
+  expiry_days: 30
+  key: some_signature_key # Must be string
+  name: bbrand_ai_mpv
+preauthorized:
+#   emails:
+#     - bbrand@gmx.net
+#     - juliane.vonkameke@arix-bi.com
