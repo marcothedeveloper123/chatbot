@@ -26,3 +26,8 @@
 1. `git branch -m new-branch-name` = rename the current branch
 2. `git push origin --delete old-branch-name` = delete the remote branch with the old name
 3. `git push origin -u new-branch-name` = push the local branch with the new name to the origin repository
+
+## revert to the latest version of a remote Git repository and discard all local changes
+1. `git fetch origin` = Fetch the Latest Changes from the Remote Repository
+2. `git reset --hard origin/<branch name>` = Reset Your Current Branch to Match the Remote Repository
+3. `git clean -fd` = Clean Your Working Directory
