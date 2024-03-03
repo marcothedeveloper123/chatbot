@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import backoff
+import requests
 
 
 class ChatClient(ABC):
@@ -29,9 +31,18 @@ class OpenAIClient(ChatClient):
 
         self.client = OpenAI()
 
+    @backoff.on_exception(
+        backoff.expo,
+        requests.exceptions.RequestException,
+        max_tries=3,
+        giveup=lambda e: e.response is not None and e.response.status_code < 500,
+    )
     def list_models(self):
-        models = self.client.models.list()
-        return [model.id for model in models]
+        try:
+            models = self.client.models.list()
+            return [model.id for model in models]
+        except Exception as e:
+            return []
 
     def generate_response(self, model, conversation_history):
         response = self.client.chat.completions.create(
@@ -96,6 +107,7 @@ class Chatbot:
         self._model = None
         self.models_cache = {}
         self.client = None
+        self._initial_state = "initializing"
         self.init_models_cache()
         # self.init_client()
         self.model = model
@@ -108,6 +120,8 @@ class Chatbot:
         except Exception as e:
             self.models_cache["ollama"] = []
 
+        self.update_initial_state()
+
     @property
     def model(self):
         return self._model
@@ -116,7 +130,23 @@ class Chatbot:
     def model(self, value):
         if self._model != value:
             self._model = value
-            self.init_client()
+            self.update_initial_state()
+            if self._initial_state == "available":
+                self.init_client()
+
+    @property
+    def initial_state(self):
+        return self._initial_state
+
+    def update_initial_state(self):
+        if not self.models_cache["openai"] and not self.models_cache["ollama"]:
+            self._initial_state = "service_unavailable"
+        elif self._model in self.models_cache.get(
+            "openai", []
+        ) or self._model in self.models_cache.get("ollama", []):
+            self._initial_state = "available"
+        else:
+            self._initial_state = "model_not_available"
 
     def init_client(self):
         if self._model:

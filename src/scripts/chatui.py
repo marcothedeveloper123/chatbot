@@ -18,14 +18,27 @@ def get_model_options(chatbot):
 
 def select_model(chatbot):
     model_options = get_model_options(chatbot)
-    selected_option = st.sidebar.selectbox("Model", model_options)
-    client, model = selected_option.split(": ", 1)
-    st.sidebar.text(model)
-
-    chatbot.model = model
+    if model_options:
+        selected_option = st.sidebar.selectbox("Model", model_options)
+        if selected_option:
+            client, model = selected_option.split(": ", 1)
+            st.sidebar.text(model)
+            chatbot.model = model
+        else:
+            st.sidebar.warning("Please select a model.")
+    else:
+        st.sidebar.error("No models are available for selection.")
 
 
 def set_system_prompt(chatbot):
+    prompt_disabled = chatbot.initial_state == "service_unavailable"
+
+    if prompt_disabled:
+        st.sidebar.warning(
+            "The chatbot service is currently unavailable. System prompt modification is disabled."
+        )
+        return
+
     # Function to directly handle system prompt updates based on text area input
     current_prompt = (
         chatbot.system_prompt
@@ -53,6 +66,14 @@ def display_previous_messages():
 
 
 def handle_user_input(chatbot):
+    input_disabled = chatbot.initial_state == "service_unavailable"
+
+    if input_disabled:
+        st.warning(
+            "The chatbot service is currently unavailable. Please try again later."
+        )
+        return
+
     if prompt := st.chat_input("What is up?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         chatbot.add_user_prompt(prompt)
