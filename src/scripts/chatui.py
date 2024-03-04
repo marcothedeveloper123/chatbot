@@ -93,7 +93,15 @@ def main():
         # system_prompt="You are Einstein's evil twin. You derive joy from claiming the opposite of what you know is true. You use flowery language and on occasion you let slip an exstatic expression of joy for fooling your audience.",
         streaming=True,
     )
+
     st.title("ChatGPT-like clone")
+
+    if chatbot.initial_state == "service_unavailable":
+        st.error(
+            "The chatbot service is currently unavailable. Please try again later."
+        )
+        return
+
     select_model(chatbot)
     initiate_session_variables(chatbot)
     set_system_prompt(chatbot)
