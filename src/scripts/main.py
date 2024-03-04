@@ -4,6 +4,7 @@ from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.styles import Style
 import argparse
 from dotenv import load_dotenv, find_dotenv
+import sys
 
 # Define console colors
 colors = {
@@ -13,6 +14,30 @@ colors = {
     "BLUE": "\033[34m",
     "RESET": "\033[0m",
 }
+
+
+def get_user_model_choice(available_models):
+    print("Please select a model from the following available models:")
+    for idx, model in enumerate(available_models, start=1):
+        print(f"{idx}. {model}")
+    print(
+        f"\nEnter the number of the model you wish to use, or 'exit' to quit:{colors['YELLOW']}"
+    )
+
+    while True:
+        choice = input(f">>> {colors['RESET']}").strip().lower()
+        if choice == "exit":
+            sys.exit("Exiting program.")
+        try:
+            choice_idx = int(choice) - 1
+            if 0 <= choice_idx < len(available_models):
+                return available_models[choice_idx]
+            else:
+                print("Invalid selection. Please enter a number from the list.")
+        except ValueError:
+            print("Please enter a valid number or 'exit'.")
+        except (EOFError, KeyboardInterrupt):
+            print(f"\n{colors['RESET']}Exiting...")
 
 
 def run_chatbot():
@@ -37,9 +62,37 @@ def run_chatbot():
     )
     args = parser.parse_args()
 
-    chatbot = Chatbot(
-        system_prompt=args.system, model=args.model, streaming=args.streaming
-    )
+    while True:
+        try:
+            chatbot = Chatbot(
+                system_prompt=args.system, model=args.model, streaming=args.streaming
+            )
+
+            # print(f"chatbot.initial_state = {chatbot.initial_state}")
+
+            if chatbot.initial_state == "service_unavailable":
+                print(
+                    f"{colors['MAGENTA']}The chatbot service is currently unavailable. Please try again later."
+                )
+                sys.exit(1)
+            elif chatbot.initial_state == "model_not_available":
+                print(
+                    f"{colors['MAGENTA']}The specified model '{args.model}' is not available.\n"
+                )
+                available_models = [
+                    model
+                    for models in chatbot.models_cache.values()
+                    for model in models
+                ]
+                args.model = get_user_model_choice(available_models)
+                print(f"{colors['RESET']}\n")
+                continue
+            break
+        except (EOFError, KeyboardInterrupt):
+            print(f"\n{colors['RESET']}Exiting...")
+            sys.exit()
+
+    # print(f"model: {chatbot.model}")
 
     cmd_history = InMemoryHistory()
 
