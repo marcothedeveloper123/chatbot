@@ -24,6 +24,14 @@ class ChatClient(ABC):
         """Generate a streaming response"""
         pass
 
+    @abstractmethod
+    def calculate_context_window(self, model):
+        """
+        Calculate the maximum context window for a given model, typically defined by
+        token limits. This method should return the maximum context size the model supports.
+        """
+        pass
+
 
 class OpenAIClient(ChatClient):
     def __init__(self):

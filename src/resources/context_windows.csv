@@ -1,0 +1,16 @@
+model_name;context_window;source
+gpt-4-0125-preview;128000;https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
+gpt-4-turbo-preview;128000;https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
+gpt-4-1106-preview;128000;https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
+gpt-4-vision-preview;128000;https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
+gpt-4-1106-vision-preview;128000;https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
+gpt-4;8192;https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
+gpt-4-0613;8192;https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
+gpt-4-32k;32768;https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
+gpt-4-32k-0613;32768;https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo
+gemma-7b;8192;https://medium.com/@lucamassaron/higher-performance-with-gemma-ecda787a83ab
+mistral-7b-instruct;32768;https://medium.com/snowflake/generating-product-descriptions-with-mistral-7b-instruct-v0-2-with-vllm-serving-3fe7110b048b#:~:text=For its size, Mistral 7B,model as of December 2023.&text=It gracefully handles a context of 32k tokens.
+phi-2.1b-2.5;2048;https://huggingface.co/microsoft/phi-2
+qwen-7b-chat;8192;https://huggingface.co/Qwen/Qwen-7B-Chat
+stable-code-3b;16384;https://huggingface.co/stabilityai/stablecode-completion-alpha-3b
+stablelm2:1.6b-zephyr;4096;https://arxiv.org/html/2402.17834v1
