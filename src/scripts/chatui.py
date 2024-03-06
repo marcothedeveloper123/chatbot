@@ -7,6 +7,8 @@ def initiate_session_variables(chatbot):
         st.session_state["messages"] = []
     if "system_prompt" not in st.session_state:
         st.session_state["system_prompt"] = chatbot.system_prompt
+    if "show_token_counts" not in st.session_state:
+        st.session_state["show_token_counts"] = False
 
 
 def get_model_options(chatbot):
@@ -77,13 +79,24 @@ def handle_user_input(chatbot):
     if prompt := st.chat_input("What is up?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         chatbot.add_user_prompt(prompt)
+
         with st.chat_message("user"):
             st.markdown(prompt)
+
+        if st.session_state.show_token_counts:
+            user_prompt_token_count = chatbot.estimate_token_count(prompt)
+            st.caption(f"Token count: {user_prompt_token_count}")
 
         with st.chat_message("assistant"):
             stream = chatbot.stream_response()
             response = st.write_stream(stream)
         st.session_state.messages.append({"role": "assistant", "content": response})
+
+        if st.session_state.show_token_counts:
+            conversation_history_count = chatbot.current_token_count
+            st.sidebar.write(
+                f"Conversation history tokens: {conversation_history_count}"
+            )
 
 
 def main():
@@ -97,6 +110,7 @@ def main():
     select_model(chatbot)
     initiate_session_variables(chatbot)
     set_system_prompt(chatbot)
+    st.sidebar.checkbox("Show Token Counts", value=False, key="show_token_counts")
     display_previous_messages()
     handle_user_input(chatbot)
 

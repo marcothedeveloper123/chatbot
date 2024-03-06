@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import backoff
 import requests
+import tiktoken
 
 
 class ChatClient(ABC):
@@ -25,7 +26,7 @@ class ChatClient(ABC):
         pass
 
     @abstractmethod
-    def calculate_context_window(self, model):
+    def estimate_token_count(self, model, text):
         """
         Calculate the maximum context window for a given model, typically defined by
         token limits. This method should return the maximum context size the model supports.
@@ -56,15 +57,50 @@ class OpenAIClient(ChatClient):
         response = self.client.chat.completions.create(
             model=model, messages=conversation_history
         )
-        return response.choices[0].message.content
+        response_text = response.choices[0].message.content
+        token_count = response.usage.total_tokens
+        return response_text, token_count
 
     def stream_response(self, model, conversation_history):
         stream = self.client.chat.completions.create(
             model=model, messages=conversation_history, stream=True
         )
+        full_response_text = ""
         for chunk in stream:
-            if chunk.choices[0].delta.content is not None:
-                yield chunk.choices[0].delta.content
+            content = chunk.choices[0].delta.content
+            if content is not None:
+                # Append the chunk's content to the full response text
+                full_response_text += content
+                # Yield each chunk's content in real-time
+                yield content
+
+            # Check for the finish_reason to see if this is the last chunk
+            if chunk.choices[0].finish_reason in ["stop", "length", "idle"]:
+                # After the loop, once all chunks have been processed, including the final one
+                break
+
+        # The stream is finished; now calculate the total token count for the full response
+        # Estimate the token count for the entire response text
+        token_count = self.estimate_token_count(model, full_response_text)
+        # Return or yield a special signal indicating the end of the stream along with the total token count
+        # This could be a tuple (None, token_count) or a custom object
+        # For simplicity, we'll just return the token count, assuming further actions are handled by the caller
+        yield None, token_count
+
+    def estimate_token_count(self, model, text):
+        """Estimates the token count for a given text using tiktoken."""
+        try:
+            # Use tiktoken to automatically find the correct encoding for the model
+            encoding = tiktoken.encoding_for_model(model)
+            # Assuming `encode` is the method to tokenize the text based on the encoding
+            tokens = encoding.encode(text)
+            token_count = len(tokens)
+            return token_count
+        except Exception as e:
+            # Handle cases where tiktoken or encoding lookup fails
+            print(f"Error estimating token count with tiktoken for model {model}: {e}")
+            # Fallback to a simple approximation if necessary
+            return len(text.split())  # Rough approximation
 
 
 class OllamaClient(ChatClient):
@@ -106,6 +142,7 @@ class Chatbot:
         model="gpt-3.5-turbo",
         streaming=False,
     ):
+        self.current_token_count = 0
         self.system_prompt = system_prompt
         self.streaming = streaming
         self.conversation_history = (
@@ -120,6 +157,7 @@ class Chatbot:
         # self.init_client()
         self.model = model
         self.init_conversation()
+        self.update_token_count_for_system_prompt()
 
     def init_models_cache(self):
         self.models_cache["openai"] = OpenAIClient().list_models()
@@ -174,14 +212,22 @@ class Chatbot:
         if user_prompt:
             self.conversation_history.append({"role": "user", "content": user_prompt})
 
+    def estimate_token_count(self, content):
+        # Ensure the client is initialized based on the current model
+        if self.client:
+            return self.client.estimate_token_count(self.model, content)
+        else:
+            return 0
+
     def generate_response(self):
         if not self.streaming:
-            response_text = self.client.generate_response(
+            response_text, token_count = self.client.generate_response(
                 self.model, self.conversation_history
             )
             self.conversation_history.append(
                 {"role": "assistant", "content": response_text}
             )
+            self.current_token_count = token_count
             return response_text
         else:
             raise NotImplementedError(
@@ -190,20 +236,44 @@ class Chatbot:
 
     def stream_response(self):
         if self.streaming:
-            for response_text in self.client.stream_response(
+            final_token_count = 0
+            for item in self.client.stream_response(
                 self.model, self.conversation_history
             ):
-                self.conversation_history.append(
-                    {"role": "assistant", "content": response_text}
-                )
-                yield response_text
+                if (
+                    isinstance(item, tuple) and item[0] is None
+                ):  # Check for the final token count
+                    final_token_count = item[1]
+                else:
+                    response_text = item
+                    self.conversation_history.append(
+                        {"role": "assistant", "content": response_text}
+                    )
+                    yield response_text
+
+            self.current_token_count += final_token_count
         else:
             raise NotImplementedError(
                 "Streaming mode is required for stream_response method."
             )
 
     def add_user_prompt(self, user_prompt):
+        """Adds a user prompt to the conversation history and updates the token count."""
         self.conversation_history.append({"role": "user", "content": user_prompt})
+        if self.client:
+            # Correctly pass the model to estimate_token_count
+            self.current_token_count += self.client.estimate_token_count(
+                self.model, user_prompt
+            )
+
+    def update_token_count_for_system_prompt(self):
+        """Estimates token count for the system prompt and resets the conversation's token count."""
+        if self.client:
+            # Correctly pass the model to estimate_token_count
+            self.current_token_count = self.client.estimate_token_count(
+                self.model, self.system_prompt
+            )
+            self.init_conversation()  # Reset or initialize the conversation history
 
     def update_system_prompt(self, new_prompt):
         """

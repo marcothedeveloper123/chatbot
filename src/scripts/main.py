@@ -60,6 +60,12 @@ def run_chatbot():
     parser.add_argument(
         "-t", "--streaming", action="store_true", help="Enable streaming mode"
     )
+    parser.add_argument(
+        "-c",
+        "--count",
+        action="store_true",
+        help="Display token counts for system prompt, user input, and conversation history",
+    )
     args = parser.parse_args()
 
     while True:
@@ -102,6 +108,15 @@ def run_chatbot():
         return
 
     try:
+        print(f"{colors['RESET']}")
+        if args.count:
+            system_prompt_token_count = chatbot.client.estimate_token_count(
+                chatbot.model, chatbot.system_prompt
+            )
+            print(
+                f"{colors['GREEN']}System prompt: {system_prompt_token_count} tokens{colors['RESET']}\n"
+            )
+
         while True:
             style = Style.from_dict({"prompt": "ansiyellow"})
             user_input = prompt(
@@ -114,23 +129,22 @@ def run_chatbot():
                 )
             else:
                 chatbot.add_user_prompt(user_input)
-                display_response(chatbot)
-                # if chatbot.streaming:
-                #     for response_text in chatbot.stream_response():
-                #         print(
-                #             f"{colors['BLUE']}{response_text}{colors['RESET']}",
-                #             end="",
-                #             flush=True,
-                #         )
-                # else:
-                #     response_text = chatbot.generate_response()
-                #     print(f"\n{colors['BLUE']}{response_text}{colors['RESET']}\n")
+                display_response(chatbot, user_input, args.count)
     except (EOFError, KeyboardInterrupt):
         print(f"\n{colors['RESET']}Exiting...")
         # TODO consider adding a stopword, e.g. `--exit`
 
 
-def display_response(chatbot):
+def display_response(chatbot, user_input=None, show_counts=False):
+    # Estimate and print the user prompt token count
+    if user_input is not None and show_counts:
+        user_prompt_token_count = chatbot.client.estimate_token_count(
+            chatbot.model, user_input
+        )
+        print(
+            f"\n{colors['GREEN']}User prompt: {user_prompt_token_count} tokens{colors['RESET']}"
+        )
+
     print(f"{colors['BLUE']}")
     if chatbot.streaming:
         for response_text in chatbot.stream_response():
@@ -138,7 +152,14 @@ def display_response(chatbot):
     else:
         response_text = chatbot.generate_response()
         print(response_text)
-    print(f"{colors['RESET']}\n")
+    print(f"{colors['RESET']}")
+
+    # Update and print the conversation history token count after the response
+    if show_counts:
+        conversation_history_token_count = chatbot.current_token_count
+        print(
+            f"{colors['GREEN']}Conversation history: {conversation_history_token_count} tokens{colors['RESET']}\n"
+        )
 
 
 if __name__ == "__main__":
