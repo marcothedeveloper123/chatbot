@@ -1,10 +1,23 @@
+import contextlib
+import io
+
+# Silence tokenizer warning on import
+with contextlib.redirect_stdout(io.StringIO()) as stdout, contextlib.redirect_stderr(
+    io.StringIO()
+) as stderr:
+    from transformers import AutoTokenizer, LlamaTokenizerFast
+    from transformers import logging as token_logger
+
+    token_logger.set_verbosity_error()
+
 from abc import ABC, abstractmethod
 import backoff
 import requests
 import tiktoken
 import os
 from huggingface_hub import HfApi
-from transformers import AutoTokenizer, LlamaTokenizerFast
+
+# from transformers import AutoTokenizer, LlamaTokenizerFast
 
 DEFAULT_TOKENIZER = LlamaTokenizerFast.from_pretrained(
     "hf-internal-testing/llama-tokenizer"
@@ -173,6 +186,37 @@ class OllamaClient(ChatClient):
         yield None, total_token_count
 
     def estimate_token_count(self, model, text):
+        def transform_model_name(model):
+            # Split the model name from its descriptor
+            parts = model.split(":")
+            model_name = parts[0]
+            # If model descriptor is 'latest', return the model name as is
+            if parts[-1] == "latest":
+                return model_name
+            else:
+                # For other descriptors, split by '-' and take relevant parts
+                descriptor_parts = parts[1].split("-")
+                # Include 'chat' specific handling with refined logic
+                if "chat" in descriptor_parts:
+                    # Find the position of 'chat' and include the segment after 'chat' if it's part of the descriptor
+                    index_of_chat = descriptor_parts.index("chat")
+                    relevant_parts = descriptor_parts[
+                        : index_of_chat + 1
+                    ]  # Include up to 'chat'
+                    # Check if there's a version or identifier immediately after 'chat' and include it
+                    if len(
+                        descriptor_parts
+                    ) > index_of_chat + 1 and not descriptor_parts[
+                        index_of_chat + 1
+                    ].endswith(
+                        ("K_M", "fp16")
+                    ):
+                        relevant_parts.append(descriptor_parts[index_of_chat + 1])
+                else:
+                    relevant_parts = descriptor_parts[:2]
+                # Reconstruct the model name with spaces and return
+                return " ".join([model_name] + relevant_parts)
+
         def fetch_base_model_identifier(model):
             """Attempt to fetch the base model identifier from the config.json file for a fine-tuned model."""
             config_url = f"https://huggingface.co/{model}/resolve/main/config.json"
@@ -182,21 +226,22 @@ class OllamaClient(ChatClient):
                 config_data = response.json()
                 return config_data.get("_name_or_path")
             except requests.RequestException as e:
-                print(f"Failed to fetch or parse config.json for {model}")
+                # print(f"Failed to fetch or parse config.json for {model}")
+                raise
 
         def load_tokenizer_with_fallback(model):
             """Attempt to load a tokenizer, handling various errors and trying a fallback for fine-tuned models."""
 
             def handle_errors(e, model):
                 if "404 Client Error" in str(e) or "Entry Not Found" in str(e):
-                    print(
-                        f"Tokenizer for {model} not found. Attempting to locate base model..."
-                    )
+                    # print(
+                    #     f"Tokenizer for {model} not found. Attempting to locate base model..."
+                    # )
                     base_model = fetch_base_model_identifier(model)
                     if base_model:
-                        print(
-                            f"Found base model {base_model}. Attempting to load its tokenizer"
-                        )
+                        # print(
+                        #     f"Found base model {base_model}. Attempting to load its tokenizer"
+                        # )
                         return AutoTokenizer.from_pretrained(
                             base_model, trust_remote_code=True
                         )
@@ -208,17 +253,17 @@ class OllamaClient(ChatClient):
                     print(
                         f"Access to model {model} is restricted. See details below:\n{str(e)}\n"
                     )
-                    print(f"Defaulting to LlamaTokenizerFast")
+                    # print(f"Defaulting to LlamaTokenizerFast")
                     return DEFAULT_TOKENIZER
                 else:
-                    print(f"Unexpected error loading tokenizer for {model}: {e}")
-                    print(f"Defaulting to LlamaTokenizerFast")
+                    # print(f"Unexpected error loading tokenizer for {model}: {e}")
+                    # print(f"Defaulting to LlamaTokenizerFast")
                     return DEFAULT_TOKENIZER
 
             try:
                 tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
             except Exception as e:
-                print(str(e))
+                # print(str(e))
                 tokenizer = handle_errors(e, model)
 
             return tokenizer
@@ -226,23 +271,24 @@ class OllamaClient(ChatClient):
         hf_api = HfApi()
 
         try:
+            model = transform_model_name(model)
             models = hf_api.list_models(
                 search=model, sort="likes", direction=-1, limit=1
             )
             model_found = next(models).id
-            print(f"Model Identifier: {model_found}")
+            # print(f"Model Identifier: {model_found}")
 
             tokenizer = load_tokenizer_with_fallback(model_found)
 
         except StopIteration:
-            print(
-                f"No models found for search term: {model}. Defaulting to LlamaTokenizerFast."
-            )
+            # print(
+            #     f"No models found for search term: {model}. Defaulting to LlamaTokenizerFast."
+            # )
             tokenizer = DEFAULT_TOKENIZER
         except Exception as e:
-            print(
-                f"An unexpected error occurred: {e}. Defaulting to LlamaTokenizerFast."
-            )
+            # print(
+            #     f"An unexpected error occurred: {e}. Defaulting to LlamaTokenizerFast."
+            # )
             tokenizer = DEFAULT_TOKENIZER
 
         encoded_output = tokenizer.encode(text)
@@ -345,10 +391,10 @@ class Chatbot:
                 {"role": "assistant", "content": response_text}
             )
             self.conversation_history_token_count += token_count
-            print(f"token count: {token_count}")
-            print(
-                f"updated conversation history count: {self.conversation_history_token_count}"
-            )
+            # print(f"token count: {token_count}")
+            # print(
+            #     f"updated conversation history count: {self.conversation_history_token_count}"
+            # )
             return response_text
         else:
             raise NotImplementedError(
@@ -373,10 +419,10 @@ class Chatbot:
                     yield response_text
 
             self.conversation_history_token_count += final_token_count
-            print(f"final token count: {final_token_count}")
-            print(
-                f"updated conversation history count: {self.conversation_history_token_count}"
-            )
+            # print(f"final token count: {final_token_count}")
+            # print(
+            #     f"updated conversation history count: {self.conversation_history_token_count}"
+            # )
         else:
             raise NotImplementedError(
                 "Streaming mode is required for stream_response method."
@@ -393,7 +439,7 @@ class Chatbot:
             self.client.estimated_prompt_token_count = self.estimated_prompt_token_count
 
             print(
-                f"Estimated token count of the user prompt: {self.estimated_prompt_token_count}"
+                # f"Estimated token count of the user prompt: {self.estimated_prompt_token_count}"
             )
 
     def update_token_count_for_system_prompt(self):
@@ -404,7 +450,7 @@ class Chatbot:
                 self.model, self.system_prompt
             )
             print(
-                f"estimated prompt token count of updated system prompt: {self.estimated_prompt_token_count}"
+                # f"estimated prompt token count of updated system prompt: {self.estimated_prompt_token_count}"
             )
             self.init_conversation()  # Reset or initialize the conversation history
 
