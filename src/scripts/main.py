@@ -156,7 +156,7 @@ def display_response(chatbot, user_input=None, show_counts=False):
 
     # Update and print the conversation history token count after the response
     if show_counts:
-        conversation_history_token_count = chatbot.current_token_count
+        conversation_history_token_count = chatbot.conversation_history_token_count
         print(
             f"{colors['GREEN']}Conversation history: {conversation_history_token_count} tokens{colors['RESET']}\n"
         )

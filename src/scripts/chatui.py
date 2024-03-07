@@ -2,6 +2,16 @@ from chatbot import Chatbot
 import streamlit as st
 
 
+def get_chatbot():
+    if "chatbot" not in st.session_state:
+        st.session_state.chatbot = Chatbot(
+            system_prompt="You are a helpful assistant.",
+            model="gpt-3.5-turbo",
+            streaming=True,
+        )
+    return st.session_state.chatbot
+
+
 def initiate_session_variables(chatbot):
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
@@ -93,19 +103,20 @@ def handle_user_input(chatbot):
         st.session_state.messages.append({"role": "assistant", "content": response})
 
         if st.session_state.show_token_counts:
-            conversation_history_count = chatbot.current_token_count
+            conversation_history_count = chatbot.conversation_history_token_count
             st.sidebar.write(
                 f"Conversation history tokens: {conversation_history_count}"
             )
 
 
 def main():
-    chatbot = Chatbot(
-        system_prompt="You are a helpful assistant",
-        # system_prompt="You are a poetic scientist",
-        # system_prompt="You are Einstein's evil twin. You derive joy from claiming the opposite of what you know is true. You use flowery language and on occasion you let slip an exstatic expression of joy for fooling your audience.",
-        streaming=True,
-    )
+    # chatbot = Chatbot(
+    #     system_prompt="You are a helpful assistant",
+    #     # system_prompt="You are a poetic scientist",
+    #     # system_prompt="You are Einstein's evil twin. You derive joy from claiming the opposite of what you know is true. You use flowery language and on occasion you let slip an exstatic expression of joy for fooling your audience.",
+    #     streaming=True,
+    # )
+    chatbot = get_chatbot()
     st.title("ChatGPT-like clone")
     select_model(chatbot)
     initiate_session_variables(chatbot)
