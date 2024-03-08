@@ -322,6 +322,12 @@ class Chatbot:
         self.init_conversation()
         self.update_token_count_for_system_prompt()
 
+    def print_conversation_history(self):
+        print("Here's your Conversation History:")
+        for i, message in enumerate(self.conversation_history, start=1):
+            print(f"Message {i}:")
+            print(f"Role: {message['role']}, Content: {message['content']}\n")
+
     def init_models_cache(self):
         self.models_cache["openai"] = OpenAIClient().list_models()
         try:
@@ -369,9 +375,13 @@ class Chatbot:
                 )
 
     def init_conversation(self, user_prompt=None):
-        self.conversation_history.append(
-            {"role": "system", "content": self.system_prompt}
-        )
+        if not self.conversation_history or (
+            self.conversation_history
+            and self.conversation_history[0]["content"] != self.system_prompt
+        ):
+            self.conversation_history.append(
+                {"role": "system", "content": self.system_prompt}
+            )
         if user_prompt:
             self.conversation_history.append({"role": "user", "content": user_prompt})
 
@@ -390,7 +400,7 @@ class Chatbot:
             self.conversation_history.append(
                 {"role": "assistant", "content": response_text}
             )
-            self.conversation_history_token_count += token_count
+            self.conversation_history_token_count = token_count
             # print(f"token count: {token_count}")
             # print(
             #     f"updated conversation history count: {self.conversation_history_token_count}"
@@ -403,6 +413,7 @@ class Chatbot:
 
     def stream_response(self):
         if self.streaming:
+            full_response_text = ""
             final_token_count = 0
             for item in self.client.stream_response(
                 self.model, self.conversation_history
@@ -413,10 +424,16 @@ class Chatbot:
                     final_token_count = item[1]
                 else:
                     response_text = item
-                    self.conversation_history.append(
-                        {"role": "assistant", "content": response_text}
-                    )
+                    full_response_text += response_text
+                    # self.conversation_history.append(
+                    #     {"role": "assistant", "content": response_text}
+                    # )
                     yield response_text
+
+            if full_response_text.strip():
+                self.conversation_history.append(
+                    {"role": "assistant", "content": full_response_text}
+                )
 
             self.conversation_history_token_count += final_token_count
             # print(f"final token count: {final_token_count}")
@@ -432,15 +449,17 @@ class Chatbot:
         """Adds a user prompt to the conversation history and updates the token count."""
         self.conversation_history.append({"role": "user", "content": user_prompt})
         if self.client:
+            print(f"client: {self.client}")
+            self.print_conversation_history()
             # Correctly pass the model to estimate_token_count
             self.estimated_prompt_token_count = self.client.estimate_token_count(
                 self.model, user_prompt
             )
             self.client.estimated_prompt_token_count = self.estimated_prompt_token_count
 
-            print(
-                # f"Estimated token count of the user prompt: {self.estimated_prompt_token_count}"
-            )
+            # print(
+            #     f"Estimated token count of the user prompt: {self.estimated_prompt_token_count}"
+            # )
 
     def update_token_count_for_system_prompt(self):
         """Estimates token count for the system prompt and resets the conversation's token count."""
@@ -449,9 +468,9 @@ class Chatbot:
             self.estimated_prompt_token_count += self.client.estimate_token_count(
                 self.model, self.system_prompt
             )
-            print(
-                # f"estimated prompt token count of updated system prompt: {self.estimated_prompt_token_count}"
-            )
+            # print(
+            #     f"estimated prompt token count of updated system prompt: {self.estimated_prompt_token_count}"
+            # )
             self.init_conversation()  # Reset or initialize the conversation history
 
     def update_system_prompt(self, new_prompt):

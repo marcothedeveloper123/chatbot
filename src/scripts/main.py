@@ -127,6 +127,12 @@ def run_chatbot():
                 print(
                     f"\n{colors['MAGENTA']}System prompt updated: {chatbot.system_prompt}{colors['RESET']}\n"
                 )
+                system_prompt_token_count = chatbot.client.estimate_token_count(
+                    chatbot.model, chatbot.system_prompt
+                )
+                print(
+                    f"{colors['GREEN']}System prompt: {system_prompt_token_count} tokens{colors['RESET']}\n"
+                )
             else:
                 chatbot.add_user_prompt(user_input)
                 display_response(chatbot, user_input, args.count)
