@@ -450,7 +450,7 @@ class Chatbot:
         self.conversation_history.append({"role": "user", "content": user_prompt})
         if self.client:
             print(f"client: {self.client}")
-            self.print_conversation_history()
+            # self.print_conversation_history()
             # Correctly pass the model to estimate_token_count
             self.estimated_prompt_token_count = self.client.estimate_token_count(
                 self.model, user_prompt
