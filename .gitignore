@@ -73,7 +73,8 @@ instance/
 docs/_build/
 
 # Streamlit
-./streamlit
+src/scripts/.streamlit
+src/scripts/.streamlit/secrets.toml
 
 # PyBuilder
 .pybuilder/
