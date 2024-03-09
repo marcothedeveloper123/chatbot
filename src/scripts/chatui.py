@@ -112,6 +112,13 @@ def handle_user_input(chatbot):
 def main():
     chatbot = get_chatbot()
     st.title("ChatGPT-like clone")
+
+    if chatbot.initial_state == "service_unavailable":
+        st.error(
+            "The chatbot service is currently unavailable. Please try again later."
+        )
+        return
+
     select_model(chatbot)
     initiate_session_variables(chatbot)
     set_system_prompt(chatbot)

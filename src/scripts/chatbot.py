@@ -148,9 +148,9 @@ class Conversation:
 
 class ChatClient(ABC):
     """
-    This is an abstract class, a kind of template for LLM client services such as
-    OpenAI and Ollama. Every service will have its own implementation of this
-    template.
+    Abstract base class for chat service clients. It defines a common interface for all chat clients,
+    ensuring that each client implementation, such as for OpenAI and Ollama, provides specific methods
+    for listing models, generating responses, and streaming responses.
     """
 
     @abstractmethod
@@ -714,6 +714,10 @@ class Chatbot:
 
     @property
     def model(self):
+        """
+        A property decorator used to get the current model in use.
+        """
+
         return self._model
 
     @property
@@ -726,6 +730,11 @@ class Chatbot:
 
     @model.setter
     def model(self, value):
+        """
+        A setter for the model property that updates the model and initializes the client
+        based on the new model if it's available in the cache.
+        """
+
         if self._model != value:
             self._model = value
             self.initialize_chatbot
