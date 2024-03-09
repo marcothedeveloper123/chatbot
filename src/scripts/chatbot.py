@@ -266,8 +266,6 @@ class OpenAIClient(ChatClient):
                 break
 
         # The stream is finished; now calculate the total token count for the full response
-        # print(full_response_text)
-        # print(model)
         response_token_count = self.estimate_token_count(full_response_text)
         # Combine the response token count and the estimated prompt count
         token_count = response_token_count + self.estimated_prompt_token_count
