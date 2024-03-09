@@ -82,8 +82,10 @@ class Conversation:
             content = response["message"]["content"]
             token_count = response["eval_count"]
         elif client_name == CLIENT_OPENAI:
-            content = response["choices"][0]["message"]["content"]
-            token_count = response["usage"]["total_tokens"]
+            # content = response["choices"][0]["message"]["content"]
+            # token_count = response["usage"]["total_tokens"]
+            content = response.choices[0].message.content
+            token_count = response.usage.total_tokens
         else:
             raise ValueError("Unsupported client type.")
 
