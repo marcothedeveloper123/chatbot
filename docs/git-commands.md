@@ -31,3 +31,8 @@
 1. `git fetch origin` = Fetch the Latest Changes from the Remote Repository
 2. `git reset --hard origin/<branch name>` = Reset Your Current Branch to Match the Remote Repository
 3. `git clean -fd` = Clean Your Working Directory
+
+## sync full repo after merging pull request in GitHub
+1. `git checkout main` = Switch to your main branch
+2. `git fetch origin` = Fetch the latest changes from the remote repository
+3. `git merge origin/main` = Merge the fetched changes into your local branch
