@@ -53,7 +53,8 @@ def run_chatbot():
         "-s",
         "--system",
         type=str,
-        default="You are a poetic assistant, skilled in explaining complex programming concepts with creative flair.",
+        default="You are a helpful assistant",
+        # default="You are a poetic assistant, skilled in explaining complex programming concepts with creative flair.",
         help="System prompt",
     )
     parser.add_argument("-u", "--user", type=str, default=None, help="User prompt")
@@ -137,13 +138,14 @@ def run_chatbot():
 
 def display_response(chatbot, user_input=None, show_counts=False):
     # Estimate and print the user prompt token count
-    if user_input is not None and show_counts:
+    if user_input is not None:
         user_prompt_token_count = chatbot.add_prompt_to_conversation(
             ROLE_USER, user_input
         )
-        print(
-            f"\n{colors['GREEN']}User prompt: {user_prompt_token_count} tokens{colors['RESET']}"
-        )
+        if show_counts:
+            print(
+                f"\n{colors['GREEN']}User prompt: {user_prompt_token_count} tokens{colors['RESET']}"
+            )
 
     print(f"{colors['BLUE']}")
     if chatbot.streaming:

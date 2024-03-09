@@ -77,7 +77,6 @@ class Conversation:
             streaming (bool): Indicates whether the response is from a streaming operation, affecting token count handling.
         """
         content, token_count = "", 0
-
         if client_name == CLIENT_OLLAMA:
             content = response["message"]["content"]
             token_count = response["eval_count"]
