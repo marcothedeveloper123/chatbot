@@ -15,6 +15,9 @@ colors = {
     "RESET": "\033[0m",
 }
 
+ROLE_SYSTEM = "system"
+ROLE_USER = "user"
+
 
 def get_user_model_choice(available_models):
     print("Please select a model from the following available models:")
@@ -74,8 +77,6 @@ def run_chatbot():
                 system_prompt=args.system, model=args.model, streaming=args.streaming
             )
 
-            # print(f"chatbot.initial_state = {chatbot.initial_state}")
-
             if chatbot.initial_state == "service_unavailable":
                 print(
                     f"{colors['MAGENTA']}The chatbot service is currently unavailable. Please try again later."
@@ -98,24 +99,18 @@ def run_chatbot():
             print(f"\n{colors['RESET']}Exiting...")
             sys.exit()
 
-    # print(f"model: {chatbot.model}")
-
     cmd_history = InMemoryHistory()
-
-    if args.user:
-        chatbot.add_user_prompt(args.user)
-        display_response(chatbot)
-        return
 
     try:
         print(f"{colors['RESET']}")
         if args.count:
-            system_prompt_token_count = chatbot.client.estimate_token_count(
-                chatbot.model, chatbot.system_prompt
-            )
+            system_prompt_token_count = chatbot.estimated_prompt_token_count
             print(
                 f"{colors['GREEN']}System prompt: {system_prompt_token_count} tokens{colors['RESET']}\n"
             )
+
+        if args.user:
+            display_response(chatbot, args.user, args.count)
 
         while True:
             style = Style.from_dict({"prompt": "ansiyellow"})
@@ -123,18 +118,17 @@ def run_chatbot():
                 ANSI(f"{colors['YELLOW']}>>> "), history=cmd_history, style=style
             )
             if user_input.startswith("-s"):
-                chatbot.update_system_prompt(user_input[3:].strip())
+                chatbot.add_prompt_to_conversation(ROLE_SYSTEM, user_input[3:].strip())
                 print(
                     f"\n{colors['MAGENTA']}System prompt updated: {chatbot.system_prompt}{colors['RESET']}\n"
                 )
                 system_prompt_token_count = chatbot.client.estimate_token_count(
-                    chatbot.model, chatbot.system_prompt
+                    chatbot.system_prompt
                 )
                 print(
                     f"{colors['GREEN']}System prompt: {system_prompt_token_count} tokens{colors['RESET']}\n"
                 )
             else:
-                chatbot.add_user_prompt(user_input)
                 display_response(chatbot, user_input, args.count)
     except (EOFError, KeyboardInterrupt):
         print(f"\n{colors['RESET']}Exiting...")
@@ -144,8 +138,8 @@ def run_chatbot():
 def display_response(chatbot, user_input=None, show_counts=False):
     # Estimate and print the user prompt token count
     if user_input is not None and show_counts:
-        user_prompt_token_count = chatbot.client.estimate_token_count(
-            chatbot.model, user_input
+        user_prompt_token_count = chatbot.add_prompt_to_conversation(
+            ROLE_USER, user_input
         )
         print(
             f"\n{colors['GREEN']}User prompt: {user_prompt_token_count} tokens{colors['RESET']}"
@@ -162,7 +156,7 @@ def display_response(chatbot, user_input=None, show_counts=False):
 
     # Update and print the conversation history token count after the response
     if show_counts:
-        conversation_history_token_count = chatbot.conversation_history_token_count
+        conversation_history_token_count = chatbot.conversation.total_token_count
         print(
             f"{colors['GREEN']}Conversation history: {conversation_history_token_count} tokens{colors['RESET']}\n"
         )
