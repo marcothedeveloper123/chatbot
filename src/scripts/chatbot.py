@@ -45,14 +45,16 @@ class Conversation:
 
     model = None
 
-    def __init__(self):
+    def __init__(self, max_token_count=8192):
         """
         Initializes a new conversation with an empty history and zero total token count.
         """
         self._history = []
         self.total_token_count = 0
+        self.estimated_total_token_count = 0
+        self.max_token_count = max_token_count
 
-    def add_prompt(self, role, content, token_count):
+    def add_prompt(self, role, content, token_count, streaming):
         """
         Adds a prompt to the conversation history with its associated role, content, and token count.
 
@@ -61,11 +63,15 @@ class Conversation:
             content (str): The text content of the prompt.
             token_count (int): The estimated token count for the prompt.
         """
+        # print(f"\n\n***<{role}> PROMPT TOKEN COUNT: {token_count}***\n\n")
         self._history.append(
             {"role": role, "content": content, "token_count": token_count}
         )
-        if role == ROLE_ASSISTANT:
-            self.total_token_count = token_count
+        if streaming:
+            self.total_token_count += token_count
+        else:
+            self.estimated_total_token_count += token_count
+        self.manage_token_count()
 
     def add_response(self, client_name, response, streaming=False):
         """
@@ -79,7 +85,7 @@ class Conversation:
         content, token_count = "", 0
         if client_name == CLIENT_OLLAMA:
             content = response["message"]["content"]
-            token_count = response["eval_count"]
+            token_count = response["prompt_eval_count"] + response["eval_count"]
         elif client_name == CLIENT_OPENAI:
             if streaming:
                 content = response["choices"][0]["message"]["content"]
@@ -90,6 +96,8 @@ class Conversation:
         else:
             raise ValueError("Unsupported client type.")
 
+        # print(f"\n\n***<TOTAL TOKEN COUNT AS PER OPENAI: {token_count}***\n\n")
+
         self._history.append(
             {"role": "assistant", "content": content, "token_count": token_count}
         )
@@ -97,6 +105,7 @@ class Conversation:
             self.total_token_count += token_count
         else:
             self.total_token_count = token_count
+            self.estimated_total_token_count = self.total_token_count
 
     def estimate_token_count(self, client_name, model, text):
         """
@@ -117,6 +126,17 @@ class Conversation:
 
         # Ensure the client is initialized based on the current model
         return client.estimate_token_count(model, text)
+
+    def manage_token_count(self):
+        # print(
+        #     f"***MANAGING TOKEN COUNT: estimtated total = {self.estimated_total_token_count}, total = {self.total_token_count}, max = {self.max_token_count} ***"
+        # )
+        while (
+            self.estimated_total_token_count > self.max_token_count - 1500
+            and len(self._history) > 1
+        ):
+            # Remove the next oldest entry after the system prompt, ensuring the conversation stays within token limits
+            self.pop(1)  # Adjusted to use the pop method for removal
 
     @property
     def history(self):
@@ -142,7 +162,22 @@ class Conversation:
         return self.total_token_count
 
     def pop(self, position):
-        pass
+        """
+        Removes an entry from the conversation history at the specified position.
+
+        Parameters:
+            position (int): The index of the entry to be removed from the conversation history.
+
+        Note: This method does not allow removing the initial system prompt (index 0).
+        """
+        # print(f"\n\n***POPPING MESSAGES:***\n\n")
+        if position == 0:
+            raise ValueError("Cannot remove the initial system prompt.")
+        if position >= 1 and position < len(self._history):
+            removed_entry = self._history.pop(position)
+            self.total_token_count -= removed_entry["token_count"]
+        else:
+            raise IndexError("Position out of range.")
 
 
 class ChatClient(ABC):
@@ -636,6 +671,7 @@ class Chatbot:
         system_prompt="You are a helpful assistant.",
         model="gpt-3.5-turbo",
         streaming=False,
+        max_token_count=8192,
     ):
         """
         Initializes a Chatbot instance with a specified system prompt, model, and streaming mode.
@@ -703,8 +739,9 @@ class Chatbot:
         Returns:
         - The token count for the added prompt.
         """
+        # print(f"***content:***{content}")
         token_count = self.client.estimate_token_count(content)
-        self.conversation.add_prompt(role, content, token_count)
+        self.conversation.add_prompt(role, content, token_count, self.streaming)
 
         if role == ROLE_SYSTEM:
             self.system_prompt = content
