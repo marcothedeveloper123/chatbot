@@ -161,6 +161,31 @@ class Conversation:
         """
         return self.total_token_count
 
+    def set_history(self, new_history):
+        validated_history = []
+        new_total_token_count = 0
+        for entry in new_history:
+            # Validate entry structure and types
+            if not self.validate_entry(entry):
+                continue
+
+        if entry.get("token_count") is None:
+            entry["token_count"] = self.estimate_token_count(
+                self.model, entry["content"]
+            )
+
+            new_total_token_count += entry.get("token_count", 0)
+            validated_history.append(entry)
+
+        # Adjust to ensure last entry is from 'assistant'
+        while validated_history and validated_history[-1]["role"] != "assistant":
+            validated_history.pop()
+
+            # Set the new history and token counts
+            self._history = validated_history
+            self.total_token_count = new_total_token_count
+            self.estimated_total_token_count = new_total_token_count
+
     def pop(self, position):
         """
         Removes an entry from the conversation history at the specified position.
@@ -693,9 +718,12 @@ class Chatbot:
         if self._initial_state == STATE_AVAILABLE:
             self.system_prompt = system_prompt
             self.conversation = Conversation(max_token_count=max_token_count)
-            self.estimated_prompt_token_count = self.add_prompt_to_conversation(
-                ROLE_SYSTEM, self.system_prompt
-            )
+            if conversation_history:
+                self.conversation.set_history(conversation_history)
+            else:
+                self.estimated_prompt_token_count = self.add_prompt_to_conversation(
+                    ROLE_SYSTEM, self.system_prompt
+                )
             self.conversation_history_token_count = self.conversation.total_token_count
 
     def initialize_chatbot(self):
