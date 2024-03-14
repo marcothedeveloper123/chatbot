@@ -672,6 +672,7 @@ class Chatbot:
         model="gpt-3.5-turbo",
         streaming=False,
         max_token_count=8192,
+        conversation_history=None,
     ):
         """
         Initializes a Chatbot instance with a specified system prompt, model, and streaming mode.
@@ -691,7 +692,7 @@ class Chatbot:
 
         if self._initial_state == STATE_AVAILABLE:
             self.system_prompt = system_prompt
-            self.conversation = Conversation()
+            self.conversation = Conversation(max_token_count=max_token_count)
             self.estimated_prompt_token_count = self.add_prompt_to_conversation(
                 ROLE_SYSTEM, self.system_prompt
             )
