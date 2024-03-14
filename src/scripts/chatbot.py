@@ -64,13 +64,26 @@ class Conversation:
             token_count (int): The estimated token count for the prompt.
         """
         # print(f"\n\n***<{role}> PROMPT TOKEN COUNT: {token_count}***\n\n")
-        self._history.append(
-            {"role": role, "content": content, "token_count": token_count}
-        )
         if streaming:
             self.total_token_count += token_count
+            self._history.append(
+                {
+                    "role": role,
+                    "content": content,
+                    "token_count": self.total_token_count,
+                    "estimated_total_token_count": None,
+                }
+            )
         else:
             self.estimated_total_token_count += token_count
+            self._history.append(
+                {
+                    "role": role,
+                    "content": content,
+                    "token_count": None,
+                    "estimated_total_token_count": self.estimated_total_token_count,
+                }
+            )
         self.manage_token_count()
 
     def add_response(self, client_name, response, streaming=False):
@@ -98,14 +111,27 @@ class Conversation:
 
         # print(f"\n\n***<TOTAL TOKEN COUNT AS PER OPENAI: {token_count}***\n\n")
 
-        self._history.append(
-            {"role": "assistant", "content": content, "token_count": token_count}
-        )
         if streaming:
             self.total_token_count += token_count
+            self._history.append(
+                {
+                    "role": "assistant",
+                    "content": content,
+                    "token_count": self.total_token_count,
+                    "estimated_total_token_count": None,
+                }
+            )
         else:
             self.total_token_count = token_count
             self.estimated_total_token_count = self.total_token_count
+            self._history.append(
+                {
+                    "role": "assistant",
+                    "content": content,
+                    "token_count": self.total_token_count,
+                    "estimated_total_token_count": self.estimated_total_token_count,
+                }
+            )
 
     def estimate_token_count(self, client_name, model, text):
         """
@@ -151,6 +177,9 @@ class Conversation:
             for entry in self._history
         ]
 
+    def history_log(self):
+        return self._history
+
     @property
     def token_count(self):
         """
@@ -162,29 +191,22 @@ class Conversation:
         return self.total_token_count
 
     def set_history(self, new_history):
-        validated_history = []
-        new_total_token_count = 0
-        for entry in new_history:
-            # Validate entry structure and types
-            if not self.validate_entry(entry):
-                continue
-
-        if entry.get("token_count") is None:
-            entry["token_count"] = self.estimate_token_count(
-                self.model, entry["content"]
-            )
-
-            new_total_token_count += entry.get("token_count", 0)
-            validated_history.append(entry)
 
         # Adjust to ensure last entry is from 'assistant'
-        while validated_history and validated_history[-1]["role"] != "assistant":
-            validated_history.pop()
+        while new_history and new_history[-1]["role"] != "assistant":
+            new_history.pop()
 
-            # Set the new history and token counts
-            self._history = validated_history
-            self.total_token_count = new_total_token_count
-            self.estimated_total_token_count = new_total_token_count
+        # Set the new history and token counts
+        self._history = new_history
+        self.total_token_count = new_history[-1][
+            "token_count"
+        ]  # the total_token_count for the last record in new_history
+        self.estimated_total_token_count = new_history[-1][
+            "estimated_total_token_count"
+        ]  # the estimated_total_token_count for teh last record in new_history
+
+    def clear_history(self):
+        self._history = []
 
     def pop(self, position):
         """

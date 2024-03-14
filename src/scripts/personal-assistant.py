@@ -5,6 +5,7 @@ import chromadb
 from chromadb.config import Settings
 import openai
 import yaml
+import json
 from time import time, sleep
 from uuid import uuid4
 from chatbot import Chatbot
@@ -16,6 +17,7 @@ LLM_main = "dolphin-mixtral:8x7b-v2.5-q5_1"
 LLM_profile = LLM_main
 LLM_kb = LLM_main
 
+CONVERSATION_HISTORY_PATH = "history_logs/conversation_history.json"
 USER_PROFILE_PATH = "user_profile.txt"
 BACKUP_DIRECTORY = "profile_logs/"
 DEFAULT_PROFILE_PATH = "user_profile_default.txt"
@@ -23,7 +25,7 @@ PROFILE_TEMPLATE_PATH = "user_profile_template.txt"
 PROFILE_TEMPLATE_TEXT = """
 - Name: UPDATE WITH YOUR NAME
 - Profession: UPDATE WITH YOUR JORB
-- Interests: UPDATE WITH YOUR HORBIES
+- Interests: UPDATE WITH YOUR HOBBIES
 - Beliefs: WHAT DO YOU BELIEVE?
 - Plans: WHAT ARE YOUR GOALS?
 - Preference: HOW DO YOU PREFER TO COMMUNICATE?
@@ -73,6 +75,8 @@ def save_file(filepath, content):
 
 
 def open_file(filepath):
+    if not os.path.exists(filepath):
+        return []
     with open(filepath, "r", encoding="utf-8", errors="ignore") as infile:
         return infile.read()
 
@@ -165,16 +169,18 @@ if __name__ == "__main__":
     collection = chroma_client.get_or_create_collection(name="knowledge_base")
 
     # instantiate chatbot
-    chatbot_main = Chatbot(
-        model=LLM_main,
-        streaming=False,
-    )
-    chatbot_profile = Chatbot(model=LLM_profile)
-    chatbot_kb = Chatbot(model=LLM_kb)
+    the_chatbot = Chatbot(model=LLM_main, streaming=False)
+    # chatbot_profile = Chatbot(model=LLM_profile)
+    # chatbot_kb = Chatbot(model=LLM_kb)
     user_messages = list()
     all_messages = list()
+    conversation_history = open_file(CONVERSATION_HISTORY_PATH)
+    if conversation_history:
+        conversation_history = json.loads(conversation_history)
+        the_chatbot.conversation.set_history(conversation_history)
 
     while True:
+        conversation_history = the_chatbot.conversation.history_log()
         # get user input
         while True:
             text = multi_line_input("\n\nUSER: ")
@@ -201,10 +207,12 @@ if __name__ == "__main__":
             .replace("<<PROFILE>>", current_profile)
             .replace("<<KB>>", kb)
         )
-        chatbot_main.add_prompt_to_conversation("system", default_system)
+        the_chatbot.add_prompt_to_conversation("system", default_system)
 
         # generate a response
-        response = chatbot(chatbot_main, text)
+        response = chatbot(the_chatbot, text)
+        conversation_history = the_chatbot.conversation.history_log()
+        save_file(CONVERSATION_HISTORY_PATH, json.dumps(conversation_history))
         all_messages.append("CHATBOT: %s" % response)
         print("\n\nCHATBOT: %s" % response)
 
@@ -224,8 +232,9 @@ if __name__ == "__main__":
             .replace("<<UPD>>", current_profile)
             .replace("<<WORDS>>", str(profile_length))
         )
-        chatbot_profile.add_prompt_to_conversation("system", profile_system_prompt)
-        updated_profile = chatbot(chatbot_profile, text)
+        the_chatbot.conversation.clear_history()
+        the_chatbot.add_prompt_to_conversation("system", profile_system_prompt)
+        updated_profile = chatbot(the_chatbot, text)
         if updated_profile.strip():
             save_file("user_profile.txt", updated_profile)
         else:
@@ -241,8 +250,9 @@ if __name__ == "__main__":
         if collection.count() == 0:
             # yay first KB!
             kb_system_prompt = open_file("prompts/system_instantiate_new_kb.txt")
-            chatbot_kb.add_prompt_to_conversation("system", kb_system_prompt)
-            article = chatbot(chatbot_kb, text)
+            the_chatbot.conversation.clear_history()
+            the_chatbot.add_prompt_to_conversation("system", kb_system_prompt)
+            article = chatbot(the_chatbot, text)
             new_id = str(uuid4())
             collection.add(documents=[article], ids=[new_id])
             save_file(
@@ -258,8 +268,9 @@ if __name__ == "__main__":
             kb_system_prompt = open_file(
                 "prompts/system_update_existing_kb.txt"
             ).replace("<<KB>>", kb)
-            chatbot_kb.add_prompt_to_conversation("system", kb_system_prompt)
-            article = chatbot(chatbot_kb, text)
+            the_chatbot.conversation.clear_history()
+            the_chatbot.add_prompt_to_conversation("system", kb_system_prompt)
+            article = chatbot(the_chatbot, text)
             collection.update(ids=[kb_id], documents=[article])
             save_file(
                 "db_logs/log_%s_update.txt" % time(),
@@ -271,8 +282,9 @@ if __name__ == "__main__":
             kb_len = len(article.split(" "))
             if kb_len > 1000:
                 kb_system_prompt = open_file("prompts/system_split_kb.txt")
-                chatbot_kb.add_prompt_to_conversation("system", kb_system_prompt)
-                articles = chatbot(chatbot_kb, text).split("ARTICLE 2:")
+                the_chatbot.conversation.clear_history()
+                the_chatbot.add_prompt_to_conversation("system", kb_system_prompt)
+                articles = chatbot(the_chatbot, text).split("ARTICLE 2:")
                 a1 = articles[0].replace("ARTICLE 1:", "").strip()
                 a2 = articles[1].strip()
                 collection.update(ids=[kb_id], documents=[a1])

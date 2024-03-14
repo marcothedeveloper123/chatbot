@@ -1,6 +1,9 @@
-- Name: UPDATE WITH YOUR NAME
-- Profession: UPDATE WITH YOUR JORB
-- Interests: UPDATE WITH YOUR HORBIES
-- Beliefs: WHAT DO YOU BELIEVE?
-- Plans: WHAT ARE YOUR GOALS?
-- Preference: HOW DO YOU PREFER TO COMMUNICATE?
+ - User name: Marco Bottaro
+- Current location: Prague, Czechia
+- Email address: id@bottaro.me
+- LinkedIn profile: linkedin.com/in/marcobottaro
+- Summary: Over 20 years in Product Management, specializing in growth strategies for SaaS scale-ups aimed at facilitating acquisitions and securing investment rounds. Excels in product discovery that translates into market success, shaping Product teams to be outcome-driven and encouraging a culture of smart risk-taking to boost customer engagement.
+- Skills and qualifications: Experience in driving revenue growth across B2B and B2C landscapes, expertise in product discovery that identifies high-potential customer assumptions, mentoring Product Managers to become strategic problem-solvers, and a track record of successful product launches.
+- Current position: Seeking new opportunities; currently unemployed after being laid off from Konica Minolta Business Solutions Czech, spol. s r.o., where I led a team of Product Managers and oversaw the development and launch of new initiatives.
+- Past positions: Director of Product Management at NICE (May 2019 - Jul 2020), Head of Product at Brand Embassy (Jan 2017 - May 2019).
+- Achievements: Developed a strategic roadmap that led to additional investment rounds and an acquisition by NICE inContact, streamlined bug-fixing processes to improve customer NPS scores, spearheaded the launch of five new channels and an AI chatbot, driving innovation and expanding market reach.
