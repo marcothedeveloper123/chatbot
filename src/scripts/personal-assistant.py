@@ -1,3 +1,4 @@
+import sys
 import os
 import shutil
 from datetime import datetime
@@ -170,6 +171,11 @@ if __name__ == "__main__":
 
     # instantiate chatbot
     the_chatbot = Chatbot(model=LLM_main, streaming=False)
+    if the_chatbot.initial_state != "available":
+        print(
+            f"The model `{LLM_main}` was not correctly initialized: '{the_chatbot.initial_state}`"
+        )
+        sys.exit(0)
     # chatbot_profile = Chatbot(model=LLM_profile)
     # chatbot_kb = Chatbot(model=LLM_kb)
     user_messages = list()
