@@ -207,6 +207,8 @@ class Conversation:
 
     def clear_history(self):
         self._history = []
+        self.total_token_count = 0
+        self.estimated_total_token_count = 0
 
     def pop(self, position):
         """
