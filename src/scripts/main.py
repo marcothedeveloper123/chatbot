@@ -70,12 +70,22 @@ def run_chatbot():
         action="store_true",
         help="Display token counts for system prompt, user input, and conversation history",
     )
+    parser.add_argument(
+        "-e",
+        "--temperature",
+        default=0.8,
+        help="Set the model temperature. High temperatures result in creative responses.",
+    )
+
     args = parser.parse_args()
 
     while True:
         try:
             chatbot = Chatbot(
-                system_prompt=args.system, model=args.model, streaming=args.streaming
+                system_prompt=args.system,
+                model=args.model,
+                streaming=args.streaming,
+                temperature=args.temperature,
             )
 
             if chatbot.initial_state == "service_unavailable":

@@ -22,6 +22,7 @@ import uuid
 DEFAULT_TOKENIZER = LlamaTokenizerFast.from_pretrained(
     "hf-internal-testing/llama-tokenizer"
 )
+DEFAULT_TEMPERATURE = 0.8
 CLIENT_OPENAI = "openai"
 CLIENT_OLLAMA = "ollama"
 ROLE_ASSISTANT = "assistant"
@@ -282,8 +283,18 @@ class OpenAIClient(ChatClient):
             self.estimated_prompt_token_count = 0
             self.name = CLIENT_OPENAI
             self.model = None
+            self._temperature = DEFAULT_TEMPERATURE
         except Exception as e:
             self.client = None
+
+    @property
+    def temperature(self):
+        return self._temperature
+
+    @temperature.setter
+    def temperature(self, value):
+        temp = float(value)
+        self._temperature = temp
 
     @backoff.on_exception(
         backoff.expo,
@@ -306,7 +317,9 @@ class OpenAIClient(ChatClient):
 
     def generate_response(self, conversation_history):
         response = self.client.chat.completions.create(
-            model=self.model, messages=conversation_history
+            model=self.model,
+            messages=conversation_history,
+            temperature=self._temperature,
         )
         """
         Generates a response from the AI model based on the given conversation history.
@@ -334,7 +347,10 @@ class OpenAIClient(ChatClient):
         After all chunks have been yielded, it yields a tuple containing None, the total token count, and a consolidated response object.
         """
         stream = self.client.chat.completions.create(
-            model=self.model, messages=conversation_history, stream=True
+            model=self.model,
+            messages=conversation_history,
+            stream=True,
+            temperature=self._temperature,
         )
         full_response_text = ""
         finish_reason = None
@@ -438,8 +454,18 @@ class OllamaClient(ChatClient):
             self.estimated_prompt_token_count = 0
             self.name = CLIENT_OLLAMA
             self.model = None
+            self._temperature = DEFAULT_TEMPERATURE
         except Exception as e:
             self.client = None
+
+    @property
+    def temperature(self):
+        return self._temperature
+
+    @temperature.setter
+    def temperature(self, value):
+        temp = float(value)
+        self._temperature = temp
 
     def list_models(self):
         """
@@ -466,7 +492,11 @@ class OllamaClient(ChatClient):
         Returns:
             tuple: A tuple containing the response text, the total token count of the interaction, and the full response object.
         """
-        response = self.client.chat(model=self.model, messages=conversation_history)
+        response = self.client.chat(
+            model=self.model,
+            messages=conversation_history,
+            options={"temperature": self._temperature},
+        )
         response_text = response["message"]["content"]
 
         # Extract the token counts for input and output
@@ -494,7 +524,10 @@ class OllamaClient(ChatClient):
         input_token_count = self.estimate_token_count(prompt)
 
         stream = self.client.chat(
-            model=self.model, messages=conversation_history, stream=True
+            model=self.model,
+            messages=conversation_history,
+            stream=True,
+            options={"temperature": self._temperature},
         )
         full_response_text = ""
         total_duration = load_duration = prompt_eval_duration = eval_duration = 0
@@ -722,6 +755,7 @@ class Chatbot:
         streaming=False,
         max_token_count=8192,
         conversation_history=None,
+        temperature=DEFAULT_TEMPERATURE,
     ):
         """
         Initializes a Chatbot instance with a specified system prompt, model, and streaming mode.
@@ -736,6 +770,7 @@ class Chatbot:
         self.streaming = streaming
         self._model_cache = {}
         self._initial_state = "initializing"
+        self._temperature = temperature
 
         self.initialize_chatbot()
 
@@ -770,6 +805,8 @@ class Chatbot:
                 if self.model in available_models:
                     self.client = client
                     self.client.model = self.model
+                    print("setting the client temperature...")
+                    self.client.temperature = self._temperature
                     model_supported = True
             except Exception as e:
                 self._model_cache[client_name] = []
@@ -827,6 +864,15 @@ class Chatbot:
         if self._model != value:
             self._model = value
             self.initialize_chatbot
+
+    @property
+    def temperature(self):
+        return self._temperature
+
+    @temperature.setter
+    def temperature(self, value):
+        temp = float(value)
+        self._temperature = temp
 
     def init_conversation(self, user_prompt=None):
         """

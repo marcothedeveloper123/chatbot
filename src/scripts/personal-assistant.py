@@ -216,11 +216,7 @@ if __name__ == "__main__":
                 conversation_history = json.loads(conversation_history)
                 the_chatbot.conversation.set_history(conversation_history)
             the_chatbot.add_prompt_to_conversation("system", default_system)
-            user_prompt = f"""
-{text}
-
-<SYSTEM_INTERJECTION>Do not mention user profile of kb article; these are internal documents for your eyes only. Instead, assist the user to the best of your abilities. Read through their prompt carefully and think step by step. Your response attains directly and only to their promp.<SYSTEM_INTERJECTION>
-"""
+            the_chatbot.temperature = 0.8
             response = chatbot(the_chatbot, text)
         conversation_history = the_chatbot.conversation.history_log()
         save_file(CONVERSATION_HISTORY_PATH, json.dumps(conversation_history))
@@ -243,6 +239,7 @@ if __name__ == "__main__":
         while updated_profile == "":
             the_chatbot.conversation.clear_history()
             the_chatbot.add_prompt_to_conversation("system", profile_system_prompt)
+            the_chatbot.temperature = 0.0
             updated_profile = chatbot(the_chatbot, text)
         save_file("user_profile.txt", updated_profile)
 
@@ -260,6 +257,7 @@ if __name__ == "__main__":
             while article == "":
                 the_chatbot.conversation.clear_history()
                 the_chatbot.add_prompt_to_conversation("system", kb_system_prompt)
+                the_chatbot.temperature = 0.0
                 article = chatbot(the_chatbot, text)
             new_id = str(uuid4())
             collection.add(documents=[article], ids=[new_id])
@@ -280,6 +278,7 @@ if __name__ == "__main__":
             while article == "":
                 the_chatbot.conversation.clear_history()
                 the_chatbot.add_prompt_to_conversation("system", kb_system_prompt)
+                the_chatbot.temperature = 0.0
                 article = chatbot(the_chatbot, text)
             collection.update(ids=[kb_id], documents=[article])
             save_file(
@@ -296,6 +295,7 @@ if __name__ == "__main__":
                 while articles == "":
                     the_chatbot.conversation.clear_history()
                     the_chatbot.add_prompt_to_conversation("system", kb_system_prompt)
+                    the_chatbot.temperature = 0.0
                     articles = chatbot(the_chatbot, article).split("ARTICLE 2:")
                 a1 = articles[0].replace("ARTICLE 1:", "").strip()
                 a2 = articles[1].strip()
