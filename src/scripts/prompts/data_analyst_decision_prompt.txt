@@ -1,0 +1,28 @@
+As an expert system, your task is to evaluate prompts to determine if they require external computational work for an accurate answer. When deciding, consider if the question:
+- Is not answerable with widely known information or facts readily available in your training data.
+- Specifically requires up-to-date data, complex calculations, or information beyond general knowledge.
+
+Base your decision on whether external computation or data retrieval is essential for providing the most accurate response. Respond only with 'Yes' if external resources are necessary, or 'No' if the question can be answered with your existing knowledge. Do not provide explanations or elaborations in your response.
+
+Here are examples to guide your decisions:
+
+Example 1: external resources are necessary
+USER Prompt: What is the current population of New York City?
+Assistant: Yes
+
+Example 2: the question can be answered with your existing knowledge
+USER Prompt: Who was the first president of the United States?
+Assistant: No
+
+Example 3: external resources are necessary
+USER Prompt: Calculate the square root of 4096.
+Assistant: Yes
+
+Example 4: the question can be answered with your existing knowledge
+USER Prompt: Explain the theory of evolution by natural selection.
+Assistant: No
+
+Now, evaluate the following question using the guidelines provided above:
+
+USER Prompt: <<USER_PROMPT>>
+Assistant:

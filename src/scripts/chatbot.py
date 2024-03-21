@@ -1,5 +1,6 @@
 import contextlib
 import io
+import sys
 
 # Silence tokenizer warning on import
 with contextlib.redirect_stdout(io.StringIO()) as stdout, contextlib.redirect_stderr(
@@ -55,7 +56,7 @@ class Conversation:
         self.estimated_total_token_count = 0
         self.max_token_count = max_token_count
 
-    def add_prompt(self, role, content, token_count, streaming):
+    def add_prompt(self, role, content, token_count=0, streaming=False):
         """
         Adds a prompt to the conversation history with its associated role, content, and token count.
 
@@ -194,17 +195,19 @@ class Conversation:
     def set_history(self, new_history):
 
         # Adjust to ensure last entry is from 'assistant'
-        while new_history and new_history[-1]["role"] != "assistant":
-            new_history.pop()
+        if len(new_history) > 2:
+            while new_history and new_history[-1]["role"] != "assistant":
+                new_history.pop()
 
         # Set the new history and token counts
         self._history = new_history
-        self.total_token_count = new_history[-1][
-            "token_count"
-        ]  # the total_token_count for the last record in new_history
-        self.estimated_total_token_count = new_history[-1][
-            "estimated_total_token_count"
-        ]  # the estimated_total_token_count for teh last record in new_history
+        if len(self._history) > 2:
+            self.total_token_count = new_history[-1][
+                "token_count"
+            ]  # the total_token_count for the last record in new_history
+            self.estimated_total_token_count = new_history[-1][
+                "estimated_total_token_count"
+            ]  # the estimated_total_token_count for the last record in new_history
 
     def clear_history(self):
         self._history = []
@@ -272,20 +275,36 @@ class OpenAIClient(ChatClient):
         model (str, None): The AI model being used for generating responses. Set dynamically.
     """
 
-    def __init__(self):
+    def __init__(self, base_url=""):
         """
         Initializes the OpenAI client and sets the base configuration.
         """
         try:
             from openai import OpenAI
+            self.base_url = base_url
 
-            self.client = OpenAI()
+            if self.base_url == "":
+                # print("openai!")
+                self.client = OpenAI()
+            else:
+                # print("base url!")
+                self.client = OpenAI(base_url=self.base_url, api_key="lm-studio")
             self.estimated_prompt_token_count = 0
             self.name = CLIENT_OPENAI
             self.model = None
             self._temperature = DEFAULT_TEMPERATURE
         except Exception as e:
+            print(f"Failed to initialize OpenAI client: {e}")
             self.client = None
+
+#     @property
+#     def base_url(self):
+#         return self._base_url
+#
+#     @base_url.setter
+#     def base_url(self, value):
+#         url = str(value)
+#         self._base_url = url
 
     @property
     def temperature(self):
@@ -310,9 +329,13 @@ class OpenAIClient(ChatClient):
             list[str]: A list of available model identifiers.
         """
         try:
+            # print("listing models!!!")
             models = self.client.models.list()
+            # print(f"models: {models}")
+            # sys.exit()
             return [model.id for model in models]
         except Exception as e:
+            print(f"Error listing models: {e}")
             return []
 
     def generate_response(self, conversation_history):
@@ -414,21 +437,183 @@ class OpenAIClient(ChatClient):
         Returns:
             int: The estimated number of tokens in the text.
         """
-        try:
-            # Use tiktoken to automatically find the correct encoding for the model
-            encoding = tiktoken.encoding_for_model(self.model)
-            # Assuming `encode` is the method to tokenize the text based on the encoding
-            tokens = encoding.encode(text)
-            token_count = len(tokens)
-            return token_count
-        except Exception as e:
-            # Handle cases where tiktoken or encoding lookup fails
-            print(
-                f"Error estimating token count with tiktoken for model {self.model}: {e}"
-            )
-            # Fallback to a simple approximation if necessary
-            return len(text.split())  # Rough approximation
+        if self.base_url == "":
+            try:
+                # Use tiktoken to automatically find the correct encoding for the model
+                encoding = tiktoken.encoding_for_model(self.model)
+                # Assuming `encode` is the method to tokenize the text based on the encoding
+                tokens = encoding.encode(text)
+                token_count = len(tokens)
+                return token_count
+            except Exception as e:
+                # Handle cases where tiktoken or encoding lookup fails
+                print(
+                    f"Error estimating token count with tiktoken for model {self.model}: {e}"
+                )
+                # Fallback to a simple approximation if necessary
+                return len(text.split())  # Rough approximation
+        else:
+            """
+            Estimates the token count of the given text. Utilizes a tokenizer that is compatible with the Ollama model to accurately count tokens.
 
+            Parameters:
+                text (str): The text to be tokenized and counted.
+
+            Returns:
+                int: The estimated number of tokens in the text.
+            """
+
+            def transform_model_name(model):
+                """
+                Transforms the model name to handle specific naming conventions, especially for models with versioning or specific configurations.
+
+                Parameters:
+                    model (str): The original model name.
+
+                Returns:
+                    str: The transformed model name suitable for searching or tokenization.
+                """
+                # Split the model name from its descriptor
+                parts = model.split(":")
+                model_name = parts[0]
+                # If model descriptor is 'latest', return the model name as is
+                if parts[-1] == "latest":
+                    return model_name
+                else:
+                    # For other descriptors, split by '-' and take relevant parts
+                    descriptor_parts = parts[1].split("-")
+                    # Include 'chat' specific handling with refined logic
+                    if "chat" in descriptor_parts:
+                        # Find the position of 'chat' and include the segment after 'chat' if it's part of the descriptor
+                        index_of_chat = descriptor_parts.index("chat")
+                        relevant_parts = descriptor_parts[
+                            : index_of_chat + 1
+                        ]  # Include up to 'chat'
+                        # Check if there's a version or identifier immediately after 'chat' and include it
+                        if len(
+                            descriptor_parts
+                        ) > index_of_chat + 1 and not descriptor_parts[
+                            index_of_chat + 1
+                        ].endswith(
+                            ("K_M", "fp16")
+                        ):
+                            relevant_parts.append(descriptor_parts[index_of_chat + 1])
+                    else:
+                        relevant_parts = descriptor_parts[:2]
+                    # Reconstruct the model name with spaces and return
+                    return " ".join([model_name] + relevant_parts)
+
+            def fetch_base_model_identifier(model):
+                """
+                Fetches the base model identifier for a fine-tuned model by accessing its configuration file.
+
+                Parameters:
+                    model (str): The fine-tuned model name.
+
+                Returns:
+                    str: The identifier of the base model.
+                """
+                config_url = f"https://huggingface.co/{model}/resolve/main/config.json"
+                try:
+                    response = requests.get(config_url)
+                    response.raise_for_status()
+                    config_data = response.json()
+                    return config_data.get("_name_or_path")
+                except requests.RequestException as e:
+                    # print(f"Failed to fetch or parse config.json for {model}")
+                    raise
+
+            def load_tokenizer_with_fallback(model):
+                """
+                Attempts to load a tokenizer for the given model, with fallback mechanisms for handling errors or restricted access.
+
+                Parameters:
+                    model (str): The model name.
+
+                Returns:
+                    A tokenizer instance compatible with the model.
+                """
+
+                def handle_errors(e, model):
+                    """
+                    Handles errors encountered when attempting to load a tokenizer for the specified model. It attempts to resolve
+                    issues such as missing tokenizers for specific models, access restrictions, or any other unexpected errors
+                    by applying fallback strategies.
+
+                    Parameters:
+                        e (Exception): The exception that was raised during the tokenizer loading attempt.
+                        model (str): The model name for which the tokenizer loading was attempted.
+
+                    Returns:
+                        A tokenizer instance. This could either be the specific tokenizer for the model, a tokenizer for the base model
+                        if the specific tokenizer is not found, or a default tokenizer if neither the specific nor base model tokenizer
+                        can be loaded.
+
+                    Raises:
+                        ValueError: If no base model identifier can be found for the given model, indicating that the model might not
+                        exist or there's an issue with its configuration on the hosting platform.
+                    """
+                    if "404 Client Error" in str(e) or "Entry Not Found" in str(e):
+                        # print(
+                        #     f"Tokenizer for {model} not found. Attempting to locate base model..."
+                        # )
+                        base_model = fetch_base_model_identifier(model)
+                        if base_model:
+                            # print(
+                            #     f"Found base model {base_model}. Attempting to load its tokenizer"
+                            # )
+                            return AutoTokenizer.from_pretrained(
+                                base_model, trust_remote_code=True
+                            )
+                        else:
+                            raise ValueError(
+                                f"Base model identifier for {model} could not be found."
+                            )
+                    elif "gated repo" in str(e).lower():
+                        print(
+                            f"Access to model {model} is restricted. See details below:\n{str(e)}\n"
+                        )
+                        # print(f"Defaulting to LlamaTokenizerFast")
+                        return DEFAULT_TOKENIZER
+                    else:
+                        # print(f"Unexpected error loading tokenizer for {model}: {e}")
+                        # print(f"Defaulting to LlamaTokenizerFast")
+                        return DEFAULT_TOKENIZER
+
+                try:
+                    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
+                except Exception as e:
+                    # print(str(e))
+                    tokenizer = handle_errors(e, model)
+
+                return tokenizer
+
+            hf_api = HfApi()
+
+            try:
+                model = transform_model_name(self.model)
+                models = hf_api.list_models(
+                    search=model, sort="likes", direction=-1, limit=1
+                )
+                model_found = next(models).id
+                # print(f"Model Identifier: {model_found}")
+
+                tokenizer = load_tokenizer_with_fallback(model_found)
+
+            except StopIteration:
+                # print(
+                #     f"No models found for search term: {model}. Defaulting to LlamaTokenizerFast."
+                # )
+                tokenizer = DEFAULT_TOKENIZER
+            except Exception as e:
+                # print(
+                #     f"An unexpected error occurred: {e}. Defaulting to LlamaTokenizerFast."
+                # )
+                tokenizer = DEFAULT_TOKENIZER
+
+            encoded_output = tokenizer.encode(text)
+            estimated_token_count = len(encoded_output)
+            return estimated_token_count
 
 class OllamaClient(ChatClient):
     """
@@ -751,6 +936,7 @@ class Chatbot:
     def __init__(
         self,
         system_prompt="You are a helpful assistant.",
+        base_url="",
         model="gpt-3.5-turbo",
         streaming=False,
         max_token_count=8192,
@@ -766,6 +952,7 @@ class Chatbot:
         - streaming: A boolean flag to determine if the responses should be streamed.
         """
         self.client = None
+        self.base_url = base_url
         self._model = model
         self.streaming = streaming
         self._model_cache = {}
@@ -791,13 +978,16 @@ class Chatbot:
         setting the client, and updating the chatbot's initial state based on client and model availability.
         """
         # Determine which client supports the specified model
-        clients = {"openai": OpenAIClient(), "ollama": OllamaClient()}
+        clients = {"openai": OpenAIClient(base_url = self.base_url), "ollama": OllamaClient()}
 
         clients_available = False
         model_supported = False
 
         for client_name, client in clients.items():
             try:
+                # self.client = client
+                # if client_name == "openai" and self.base_url != "":
+                #     client.base_url = self.base_url
                 available_models = client.list_models()
                 self._model_cache[client_name] = available_models
                 clients_available = True
@@ -805,7 +995,6 @@ class Chatbot:
                 if self.model in available_models:
                     self.client = client
                     self.client.model = self.model
-                    print("setting the client temperature...")
                     self.client.temperature = self._temperature
                     model_supported = True
             except Exception as e:
@@ -902,7 +1091,7 @@ class Chatbot:
         """
         # Ensure the client is initialized based on the current model
         if self.client:
-            return self.client.estimate_token_count(self.model, content)
+            return self.client.estimate_token_count(content)
         else:
             return 0
 
