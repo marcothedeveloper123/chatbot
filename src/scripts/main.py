@@ -185,7 +185,7 @@ def display_response(conversation_manager, chatbot, user_input=None, show_counts
     for part in response:
         print(part, end="", flush=True)
 
-    print(f"\n{colors['RESET']}")
+    print(f"{colors['RESET']}")
 
     # if chatbot.streaming:
     #     for part in response:

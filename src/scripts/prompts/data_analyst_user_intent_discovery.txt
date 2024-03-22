@@ -1,0 +1,5 @@
+Based on the conversation history, determine the necessary action to provide an accurate response. The options are "requires_coding", "requires_web_api_call", "requires_db_query", or "requires_web_query".
+
+"requires_web_api_call" has our preference over "requires_web_query" wherever possible.
+
+Provide the category that best fits the requirements of this query.

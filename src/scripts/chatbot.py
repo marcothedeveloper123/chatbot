@@ -32,6 +32,7 @@ ROLE_USER = "user"
 STATE_SERVICE_UNAVAILABLE = "service_unavailable"
 STATE_MODEL_UNAVAILABLE = "service_unavailable"
 STATE_AVAILABLE = "available"
+SYSTEM_PROMPT_FILEPATH = "prompt/system_conversation.txt"
 
 # Disable parallel tokenization to avoid potential deadlocks
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -100,7 +101,8 @@ class Conversation:
         content, token_count = "", 0
         if client_name == CLIENT_OLLAMA:
             content = response["message"]["content"]
-            token_count = response["prompt_eval_count"] + response["eval_count"]
+            # token_count = response["prompt_eval_count"] + response["eval_count"]
+            token_count = response["eval_count"]
         elif client_name == CLIENT_OPENAI:
             if streaming:
                 content = response["choices"][0]["message"]["content"]
@@ -962,7 +964,11 @@ class Chatbot:
         self.initialize_chatbot()
 
         if self._initial_state == STATE_AVAILABLE:
-            self.system_prompt = system_prompt
+            system_prompt_file = self.load_system_prompt(SYSTEM_PROMPT_FILEPATH)
+            if system_prompt_file == "":
+                self.system_prompt = system_prompt
+            else:
+                self.system_prompt = system_prompt_file
             self.conversation = Conversation(max_token_count=max_token_count)
             if conversation_history:
                 self.conversation.set_history(conversation_history)
@@ -1007,6 +1013,22 @@ class Chatbot:
             self._initial_state = "model_not_available"
         else:
             self._initial_state = "available"
+
+    def load_system_prompt(self, filename):
+        """
+        Load the system prompt from a file.
+
+        Parameters:
+        - filename (str): The name of the file containing the system prompt.
+
+        Returns:
+        - str: The content of the system prompt file.
+        """
+        try:
+            with open(filename, 'r', encoding='utf-8') as file:
+                return file.read()
+        except FileNotFoundError:
+            return ""
 
     def add_prompt_to_conversation(self, role, content):
         """
@@ -1122,21 +1144,28 @@ class Chatbot:
         Yields:
         - Incremental parts of the chatbot's response as they become available.
         """
+        # print("streaming")
         if self.streaming:
             full_response_text = ""
             final_token_count = 0
+            response = {}
             for item in self.client.stream_response(self.conversation.history):
                 if (
                     isinstance(item, tuple) and item[0] is None
                 ):  # Check for the final token count
                     final_token_count = item[1]
-                    response = item[2]
+                    consolidated_response = item[2]
+                    response = {
+                        "message": {"content": consolidated_response["message"]["content"]},
+                        "eval_count": final_token_count
+                    }
                 else:
                     response_text = item
                     full_response_text += response_text
                     yield response_text
 
-            self.conversation.add_response(self.client.name, response, streaming=True)
+            if response:
+                self.conversation.add_response(self.client.name, response, streaming=True)
 
             yield "\n"
         else:

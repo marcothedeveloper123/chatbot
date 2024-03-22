@@ -1,0 +1,5 @@
+nGiven the nature of the latest question and the guidelines provided, is it directly answerable? General knowledge questions, historical information, practical questions, and topics covered by common knowledge or standard educational material should be considered directly answerable by a language model like myself.
+
+Numerical questions should be considered NOT directly answerable.
+
+Respond with a simple 'Yes' for directly answerable questions, or 'No' for questions that fall outside this criterion.
