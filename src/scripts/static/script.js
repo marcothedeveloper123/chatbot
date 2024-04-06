@@ -16,6 +16,10 @@ class Chat {
 		this.MESSAGE_CONTENT_CLASS = 'message-content';
 		this.SENDER_NAME_CLASS = 'sender-name';
 
+		// Populate the select box with all available LLM models
+		this.modelSelect = document.getElementById('modelSelect');
+		this.fetchAndPopulateModels();
+
 		this.notyf = new Notyf();
 		this.initChat();
 	}
@@ -74,6 +78,40 @@ class Chat {
 			this.sendButton.disabled = false; // Re-enable the send button.
 			this.saveChatState(); // Save the current chat state.
 		});
+
+		this.modelSelect.addEventListener('change', (event) => {
+			const newModel = event.target.value;
+			if (newModel) {
+				this.switchModel(newModel);
+			}
+		});
+	}
+
+	/**
+	 * Populate the select box with the names of available LLMs.
+	 */
+	fetchAndPopulateModels() {
+		fetch('/models')
+			.then(response => response.json())
+			.then(data => {
+				const { available_models: models, current_model: currentModel } = data;
+				models.forEach(model => {
+					const option = document.createElement('option');
+					option.value = model;
+					option.textContent = model;
+					option.selected = model === currentModel;
+					this.modelSelect.appendChild(option);
+				});
+			})
+			.catch(error => {
+				console.error('Error fetching models: ', errror);
+				this.notifyUser('Error fetching models. Please refresh the page.', 'error');
+			})
+	}
+
+	switchModel(newModel) {
+		this.socket.emit('switch_model', { model: newModel });
+		this.userInput.focus();
 	}
 
 	/**

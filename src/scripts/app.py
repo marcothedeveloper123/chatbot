@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 from flask_socketio import SocketIO
 from chatbot import Chatbot
 
@@ -10,6 +10,17 @@ chatbot = Chatbot(model="mistral:7b-instruct-v0.2-fp16", streaming=True)
 @app.route('/')
 def index():
 	return render_template('index.html')
+
+@app.route('/models')
+def models():
+	available_models = [model for models in chatbot.model_cache.values() for model in models]
+	return jsonify({"available_models": available_models, "current_model": chatbot.model})
+
+@socketio.on('switch_model')
+def handle_switch_model(data):
+	new_model = data['model']
+	chatbot.model = new_model
+	socketio.emit('model_switched', {'model': new_model})
 
 @socketio.on('send_message')
 def handle_message(data):

@@ -1,13 +1,3 @@
-@font-face {
-	font-family: "Queulat Cnd Regular";
-	src: url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.eot");
-	src: url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.eot?#iefix") format("embedded-opentype"),
-		 url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.woff2") format("woff2"),
-		 url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.woff") format("woff"),
-		 url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.ttf") format("truetype"),
-		 url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.svg#Queulat Cnd Regular") format("svg");
-}
-
 .material-symbols-outlined {
 	font-variation-settings:
 	'FILL' 0,
@@ -17,18 +7,32 @@
 	vertical-align: middle; /* Aligns the icon vertically with the text */
 }
 
+header {
+	top: 0;
+	bottom: auto;
+	justify-content: space-between;
+}
+
+#modelSelect {
+	font-family: "Newsreader", serif;
+	font-weight: 600;
+	/* font-size: 1.2rem; */
+	line-height: 2.1;
+	border: none;
+}
+
 #chatbox {
-	font-family: 'Queulat Cnd Regular', sans-serif;
+	font-family: "Newsreader", serif;
+	font-weight: 400;
 	font-size: 0.9rem; /* Equivalent to 14.4px if the base font size is 16px */
 	line-height: 1.6;
 	overflow-y: auto;
 	position: absolute;
-	top: 0;
+	top: 60px;
 	left: 0;
 	right: 0;
 	bottom: 60px;
 	padding: 10px;
-	/* padding-bottom: 60px; */
 }
 
 #chatbox p {
@@ -37,7 +41,7 @@
 	margin-top: 1.5rem;
 }
 
-#inputArea {
+header, #inputArea {
 	position: fixed;
 	bottom: 0;
 	left: 0;
@@ -66,7 +70,7 @@
 }
 
 @media (min-width: 768px) { /* This targets screens wider than 768px */
-  #chatbox, #inputArea { /* Apply styles to both chatbox and inputArea */
+  #chatbox, #inputArea, header { /* Apply styles to both chatbox and inputArea */
 	max-width: 700px;
 	margin-left: auto;
 	margin-right: auto; /* Centering the elements */
@@ -97,4 +101,16 @@
 .message-content {
   display: inline;
   vertical-align: middle;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
 }

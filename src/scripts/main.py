@@ -89,7 +89,7 @@ def run_chatbot():
                 )
                 available_models = [
                     model
-                    for models in chatbot.models_cache.values()
+                    for models in chatbot.model_cache.values()
                     for model in models
                 ]
                 args.model = get_user_model_choice(available_models)
