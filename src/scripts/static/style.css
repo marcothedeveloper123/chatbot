@@ -1,0 +1,100 @@
+@font-face {
+	font-family: "Queulat Cnd Regular";
+	src: url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.eot");
+	src: url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.eot?#iefix") format("embedded-opentype"),
+		 url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.woff2") format("woff2"),
+		 url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.woff") format("woff"),
+		 url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.ttf") format("truetype"),
+		 url("https://db.onlinewebfonts.com/t/e74b0a264829f7ce17a19ad5c0c18feb.svg#Queulat Cnd Regular") format("svg");
+}
+
+.material-symbols-outlined {
+	font-variation-settings:
+	'FILL' 0,
+	'wght' 400,
+	'GRAD' 0,
+	'opsz' 24;
+	vertical-align: middle; /* Aligns the icon vertically with the text */
+}
+
+#chatbox {
+	font-family: 'Queulat Cnd Regular', sans-serif;
+	font-size: 0.9rem; /* Equivalent to 14.4px if the base font size is 16px */
+	line-height: 1.6;
+	overflow-y: auto;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 60px;
+	padding: 10px;
+	/* padding-bottom: 60px; */
+}
+
+#chatbox p {
+	margin-bottom: 1.5rem; /* Adjust the bottom margin to control space between messages */
+	/* If you want to ensure the spacing is consistent above and below, you might also set the top margin */
+	margin-top: 1.5rem;
+}
+
+#inputArea {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0; /* Optional, but recommended for full width */
+	display: flex;
+	align-items: center;
+	padding: 0 5px; /* Cosmetic padding around the input area */
+	box-sizing: border-box; /* Include padding in the width calculation */
+	height: 60px;
+}
+
+.input-wrapper {
+	width: 100%;
+	display: flex;
+	align-items: center;
+}
+
+#userInput {
+	flex-grow: 1; /* Allows the input to grow and fill available space */
+	margin-right: 10px; /* Space between the input and the button */
+	padding: 8px; /* Padding inside the input for aesthetics */
+}
+
+#sendButton {
+	padding: 8px 15px; /* Padding inside the button */
+}
+
+@media (min-width: 768px) { /* This targets screens wider than 768px */
+  #chatbox, #inputArea { /* Apply styles to both chatbox and inputArea */
+	max-width: 700px;
+	margin-left: auto;
+	margin-right: auto; /* Centering the elements */
+  }
+}
+
+.user-icon {
+	background-color: blue;
+}
+
+.chatbot-icon {
+	background-color: green;
+}
+
+.user-icon, .chatbot-icon {
+  color: white;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+.sender-name {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+.message-content {
+  display: inline;
+  vertical-align: middle;
+}

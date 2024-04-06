@@ -1149,6 +1149,7 @@ class Chatbot:
             full_response_text = ""
             final_token_count = 0
             response = {}
+
             for item in self.client.stream_response(self.conversation.history):
                 if (
                     isinstance(item, tuple) and item[0] is None
@@ -1167,7 +1168,8 @@ class Chatbot:
             if response:
                 self.conversation.add_response(self.client.name, response, streaming=True)
 
-            yield "\n"
+            # yield "\n"
+            yield {"message": "\n", "end_of_stream": True}
         else:
             raise NotImplementedError(
                 "Streaming mode is required for stream_response method."
