@@ -76,17 +76,25 @@ class Chat {
 
 		this.socket.on('end_chatbot_response', () => {
 			// Find the last chatbot response block in `#chatbox`
-			const chatbotResponseElement = this.chatbox.querySelector(`.${this.CHATBOT_RESPONSE_CLASS}:last-of-type .${this.MESSAGE_CONTENT_CLASS}`);
+			const chatbotResponseElement = this.chatbox.querySelector(`.${this.CHATBOT_RESPONSE_CLASS}:last-of-type`);
 
 			if (chatbotResponseElement) {
+				// Get the message content element
+				const messageContentElement = chatbotResponseElement.querySelector(`.${this.MESSAGE_CONTENT_CLASS}`);
+
 				// Parse the entire content of the last chatbot response as Markdown
-				const parsedContent = marked.parse(chatbotResponseElement.innerHTML.replace(/<br>/g, '\n'));
+				const parsedContent = marked.parse(messageContentElement.innerHTML.replace(/<br>/g, '\n'));
 
-				// Replace the chatbot's response with parsed HTML
-				chatbotResponseElement.innerHTML = parsedContent;
+				// Create a new element to hold the parsed HTML
+				const parsedElement = document.createElement('div');
+				parsedElement.className = this.MESSAGE_CONTENT_CLASS;
+				parsedElement.innerHTML = parsedContent;
 
-				// Find all code elements and apply syntax highlighting
-				chatbotResponseElement.querySelectorAll('pre code').forEach((block) => {
+				// Replace the old message content with the new parsed content
+				chatbotResponseElement.replaceChild(parsedElement, messageContentElement);
+
+				// Find all code elements within the new parsed content and apply syntax highlighting
+				parsedElement.querySelectorAll('pre code').forEach((block) => {
 					hljs.highlightBlock(block);
 				});
 			}
