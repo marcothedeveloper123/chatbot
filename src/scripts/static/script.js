@@ -75,6 +75,22 @@ class Chat {
 		});
 
 		this.socket.on('end_chatbot_response', () => {
+			// Find the last chatbot response block in `#chatbox`
+			const chatbotResponseElement = this.chatbox.querySelector(`.${this.CHATBOT_RESPONSE_CLASS}:last-of-type .${this.MESSAGE_CONTENT_CLASS}`);
+
+			if (chatbotResponseElement) {
+				// Parse the entire content of the last chatbot response as Markdown
+				const parsedContent = marked.parse(chatbotResponseElement.innerHTML.replace(/<br>/g, '\n'));
+
+				// Replace the chatbot's response with parsed HTML
+				chatbotResponseElement.innerHTML = parsedContent;
+
+				// Find all code elements and apply syntax highlighting
+				chatbotResponseElement.querySelectorAll('pre code').forEach((block) => {
+					hljs.highlightBlock(block);
+				});
+			}
+
 			this.sendButton.disabled = false; // Re-enable the send button.
 			this.saveChatState(); // Save the current chat state.
 		});
