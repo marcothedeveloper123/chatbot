@@ -37,6 +37,8 @@ class Chat {
 		this.bindEvents();
 		// Restore previous chat state if available.
 		this.restoreChatState();
+		// Attach event listeners to existing Copy buttons
+		this.attachListenersToCopyButtons();
 		// Focus on the input field for immediate typing.
 		this.userInput.focus();
 	}
@@ -81,22 +83,22 @@ class Chat {
 			if (chatbotResponseElement) {
 				// Get the message content element
 				const messageContentElement = chatbotResponseElement.querySelector(`.${this.MESSAGE_CONTENT_CLASS}`);
+				console.log(messageContentElement);
 
 				// Parse the entire content of the last chatbot response as Markdown
-				const parsedContent = marked.parse(messageContentElement.innerHTML.replace(/<br>/g, '\n'));
+				const parsedContent = marked.parse(messageContentElement.innerHTML.replace(/<br>/g, '\n'))
+					.replace("&amp;", "&")
+					.replace("&lt;", "<")
+					.replace("&gt;", ">")
+					.replace("&apos;", "'");
 
-				// Create a new element to hold the parsed HTML
-				const parsedElement = document.createElement('div');
-				parsedElement.className = this.MESSAGE_CONTENT_CLASS;
-				parsedElement.innerHTML = parsedContent;
+				// Replace the inner HTML of the message content element with the parsed content
+				messageContentElement.innerHTML = parsedContent;
 
-				// Replace the old message content with the new parsed content
-				chatbotResponseElement.replaceChild(parsedElement, messageContentElement);
+				hljs.highlightAll();
 
-				// Find all code elements within the new parsed content and apply syntax highlighting
-				parsedElement.querySelectorAll('pre code').forEach((block) => {
-					hljs.highlightBlock(block);
-				});
+				// Set up toolbars for code blocks within the last chatbot response
+				this.setupCodeBlockToolbars(chatbotResponseElement);
 			}
 
 			this.sendButton.disabled = false; // Re-enable the send button.
@@ -108,6 +110,66 @@ class Chat {
 			if (newModel) {
 				this.switchModel(newModel);
 			}
+		});
+	}
+
+	/**
+	 * Attach the "Copied!" functionality to all copy buttons.
+	 */
+	attachListenersToCopyButtons() {
+		const copyButtons = this.chatbox.querySelectorAll('.copy-code-button');
+		copyButtons.forEach(button => {
+			// Directly passing the button to attachCopyButtonListener assumes
+			// the method is adapted to accept a button element as a parameter.
+			this.attachCopyButtonListener(button);
+		});
+	}
+
+	attachCopyButtonListener(copyButton, codeBlock) {
+		copyButton.addEventListener('click', () => {
+			// After copying, clear the selection
+			if (document.selection) {
+				document.selection.empty();
+			} else if (window.getSelection) {
+				window.getSelection().removeAllRanges();
+			}
+
+			// Change button text to "✓ Copied!" and revert back after 3 seconds
+			const originalText = copyButton.textContent;
+			copyButton.textContent = '✓ Copied!';
+			setTimeout(() => {
+				copyButton.textContent = originalText; // Revert to original text
+			}, 3000); // 3000ms = 3 seconds
+		});
+	}
+
+	setupCodeBlockToolbars(chatbotResponseElement) {
+		const codeBlocks = chatbotResponseElement.querySelectorAll('pre code');
+		codeBlocks.forEach((block) => {
+			const language = block.classList[0].replace('language-', ''); // Assuming `hljs` adds the language as the second class
+			const toolbar = document.createElement('div');
+			toolbar.className = 'code-header';
+
+			const languageLabel = document.createElement('span');
+			languageLabel.className = 'language-label';
+			languageLabel.textContent = language ? language.toLowerCase() : 'CODE'; // Default label
+			toolbar.appendChild(languageLabel);
+
+			const copyButton = document.createElement('button');
+			copyButton.className = 'copy-code-button';
+			copyButton.textContent = 'Copy';
+			toolbar.appendChild(copyButton);
+
+			// Insert the toolbar before the code block
+			block.parentNode.insertBefore(toolbar, block);
+
+			// Attach copy functionality
+			new ClipboardJS(copyButton, {
+				target: () => block
+			});
+
+			// Attach event listener for clearing selection after copy
+			this.attachCopyButtonListener(copyButton, block);
 		});
 	}
 
@@ -148,7 +210,7 @@ class Chat {
 			return;
 		}
 
-		this.socket.emit('send_message', {message}, (response) => {
+		this.socket.emit('send_message', { message }, (response) => {
 			// Callback to handle acknowledgment or error from server
 			if (response && response.error) {
 				this.notifyUser(response.error, 'error');
@@ -182,19 +244,21 @@ class Chat {
 	messageFactory(sender, message, isNewMessage) {
 		const iconHtml = sender === "You" ? this.USER_ICON_HTML : this.CHATBOT_ICON_HTML;
 		const senderLabel = `<strong class="${this.SENDER_NAME_CLASS}">${sender}:</strong>`;
-		const messageContent = `<span class="${this.MESSAGE_CONTENT_CLASS}">${message}</span>`;
+
+		const messageContent = `<div class="${this.MESSAGE_CONTENT_CLASS}"><p>${message}</p></div>`;
 
 		if (sender === "You" || isNewMessage) {
-			return `<p class="${sender.toLowerCase()}-message">${iconHtml}${senderLabel}<br>${messageContent}</p>`;
+			return `<div class="user-message"><p>${iconHtml}${senderLabel}</p>${messageContent}</div>`;
 		} else {
 			const lastParagraph = this.chatbox.querySelector(`.${this.CHATBOT_RESPONSE_CLASS}:last-child .${this.MESSAGE_CONTENT_CLASS}`);
 			if (lastParagraph) {
+				// Append new message content correctly within a <div> container
 				lastParagraph.innerHTML += message;
 				return ''; // No need to return new HTML if appending to an existing message
 			}
 		}
 		// For a new chatbot message
-		return `<p class="${this.CHATBOT_RESPONSE_CLASS}">${iconHtml}${senderLabel}<br>${messageContent}</p>`;
+		return `<div class="${this.CHATBOT_RESPONSE_CLASS}"><p>${iconHtml}${senderLabel}</p><br>${messageContent}</div>`;
 	}
 
 	/**
@@ -212,7 +276,7 @@ class Chat {
 	 * Adds a placeholder for the chatbot's upcoming message.
 	 */
 	addChatbotPlaceholder() {
-		const placeholderHtml = `<p class="chatbot-response">${this.CHATBOT_ICON_HTML} <strong>Chatbot:</strong><br><span class="message-content"></span></p>`;
+		const placeholderHtml = `<div class="chatbot-response"><p>${this.CHATBOT_ICON_HTML} <strong>Chatbot:</strong></p><div class="message-content"></div></div>`;
 		this.chatbox.insertAdjacentHTML('beforeend', placeholderHtml);
 		this.scrollChatToBottom();
 	}
@@ -228,7 +292,8 @@ class Chat {
 	 * Saves the current chatbox HTML content to local storage for persistence.
 	 */
 	saveChatState() {
-		localStorage.setItem('chat', this.chatbox.innerHTML);
+		const chatContent = this.chatbox.innerHTML;
+		localStorage.setItem('chat', chatContent);
 	}
 
 	/**
@@ -236,9 +301,15 @@ class Chat {
 	 */
 	restoreChatState() {
 		const savedChat = localStorage.getItem('chat');
-		if (savedChat) this.chatbox.innerHTML = savedChat;
+		if (savedChat) {
+			this.chatbox.innerHTML = savedChat;
+		}
+
+		// Restore scroll position
 		const savedScrollPosition = localStorage.getItem('chatScrollPosition');
-		if (savedScrollPosition) this.chatbox.scrollTop = parseInt(savedScrollPosition, 10);
+		if (savedScrollPosition) {
+			this.chatbox.scrollTop = parseInt(savedScrollPosition, 10);
+		}
 	}
 }
 
