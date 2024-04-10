@@ -61,6 +61,7 @@ header, #inputArea {
 
 #userInput {
 	flex-grow: 1; /* Allows the input to grow and fill available space */
+	flex-basis: auto;
 	margin-right: 10px; /* Space between the input and the button */
 	padding: 8px; /* Padding inside the input for aesthetics */
 }

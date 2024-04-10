@@ -33,6 +33,8 @@ class Chat {
 		this.userInput = document.getElementById("userInput");
 		this.sendButton = document.getElementById("sendButton");
 
+		
+
 		// Bind UI events for chat interaction.
 		this.bindEvents();
 		// Restore previous chat state if available.
@@ -180,20 +182,47 @@ class Chat {
 		fetch('/models')
 			.then(response => response.json())
 			.then(data => {
-				const { available_models: models, current_model: currentModel } = data;
-				models.forEach(model => {
-					const option = document.createElement('option');
-					option.value = model;
-					option.textContent = model;
-					option.selected = model === currentModel;
-					this.modelSelect.appendChild(option);
-				});
+				this.populateModelSelectBox(data);
+				// const { available_models: models, current_model: currentModel } = data;
+				// models.forEach(model => {
+				// 	const option = document.createElement('option');
+				// 	option.value = model;
+				// 	option.textContent = model;
+				// 	option.selected = model === currentModel;
+				// 	this.modelSelect.appendChild(option);
+				// });
 			})
 			.catch(error => {
-				console.error('Error fetching models: ', errror);
+				console.error('Error fetching models: ', error);
 				this.notifyUser('Error fetching models. Please refresh the page.', 'error');
-			})
+			});
+
 	}
+
+	// Populate the select box with formatted model names
+	populateModelSelectBox(data) {
+		const { available_models: models, current_model: currentModel } = data;
+		models.forEach(model => {
+			const option = document.createElement('option');
+			option.value = model;
+			option.textContent = this.formatModelName(model);
+			option.selected = model === currentModel;
+			this.modelSelect.appendChild(option);
+		});
+	}
+	
+	// Format model names for display
+	formatModelName(modelName) {
+		let formattedName = modelName.substring(modelName.lastIndexOf('/') + 1).split('.gguf')[0];
+
+		formattedName = formattedName
+			.replace(/\.(?=Q)/g, ' ')
+			.replace(/:/g, ' ')
+			.replace(/-/g, ' ')
+			.replace(/(\d)b/g, '$1B');
+
+		return formattedName;
+	}	
 
 	switchModel(newModel) {
 		this.socket.emit('switch_model', { model: newModel });
@@ -300,16 +329,25 @@ class Chat {
 	 * Restores chat state from local storage if available.
 	 */
 	restoreChatState() {
-		const savedChat = localStorage.getItem('chat');
-		if (savedChat) {
-			this.chatbox.innerHTML = savedChat;
-		}
+		// Fetch chat history from server
+		fetch('/conversation_history')
+			.then((response) => response.json())
+			.then((data) => {
+				if (data.conversation_history.length > 1) {
+					console.log("Chat history is not empty");
+					const savedChat = localStorage.getItem('chat');
+					if (savedChat) {
+						this.chatbox.innerHTML = savedChat;
+					}
 
-		// Restore scroll position
-		const savedScrollPosition = localStorage.getItem('chatScrollPosition');
-		if (savedScrollPosition) {
-			this.chatbox.scrollTop = parseInt(savedScrollPosition, 10);
-		}
+					// Restore scroll position
+					const savedScrollPosition = localStorage.getItem('chatScrollPosition');
+					if (savedScrollPosition) {
+						this.chatbox.scrollTop = parseInt(savedScrollPosition, 10);
+					}
+				}
+			})
+			.catch(error => console.error('Error fetching conversation history:', error));
 	}
 }
 

@@ -1,3 +1,4 @@
+from config import DEFAULT_TEMPERATURE
 import contextlib
 import io
 import sys
@@ -23,7 +24,6 @@ import uuid
 DEFAULT_TOKENIZER = LlamaTokenizerFast.from_pretrained(
     "hf-internal-testing/llama-tokenizer"
 )
-DEFAULT_TEMPERATURE = 0.8
 CLIENT_OPENAI = "openai"
 CLIENT_OLLAMA = "ollama"
 ROLE_ASSISTANT = "assistant"
@@ -283,6 +283,7 @@ class OpenAIClient(ChatClient):
         """
         try:
             from openai import OpenAI
+
             self.base_url = base_url
 
             if self.base_url == "":
@@ -299,14 +300,14 @@ class OpenAIClient(ChatClient):
             print(f"Failed to initialize OpenAI client: {e}")
             self.client = None
 
-#     @property
-#     def base_url(self):
-#         return self._base_url
-#
-#     @base_url.setter
-#     def base_url(self, value):
-#         url = str(value)
-#         self._base_url = url
+    #     @property
+    #     def base_url(self):
+    #         return self._base_url
+    #
+    #     @base_url.setter
+    #     def base_url(self, value):
+    #         url = str(value)
+    #         self._base_url = url
 
     @property
     def temperature(self):
@@ -583,7 +584,9 @@ class OpenAIClient(ChatClient):
                         return DEFAULT_TOKENIZER
 
                 try:
-                    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
+                    tokenizer = AutoTokenizer.from_pretrained(
+                        model, trust_remote_code=True
+                    )
                 except Exception as e:
                     # print(str(e))
                     tokenizer = handle_errors(e, model)
@@ -616,6 +619,7 @@ class OpenAIClient(ChatClient):
             encoded_output = tokenizer.encode(text)
             estimated_token_count = len(encoded_output)
             return estimated_token_count
+
 
 class OllamaClient(ChatClient):
     """
@@ -984,7 +988,10 @@ class Chatbot:
         setting the client, and updating the chatbot's initial state based on client and model availability.
         """
         # Determine which client supports the specified model
-        clients = {"openai": OpenAIClient(base_url = self.base_url), "ollama": OllamaClient()}
+        clients = {
+            "openai": OpenAIClient(base_url=self.base_url),
+            "ollama": OllamaClient(),
+        }
 
         clients_available = False
         model_supported = False
@@ -1025,7 +1032,7 @@ class Chatbot:
         - str: The content of the system prompt file.
         """
         try:
-            with open(filename, 'r', encoding='utf-8') as file:
+            with open(filename, "r", encoding="utf-8") as file:
                 return file.read()
         except FileNotFoundError:
             return ""
@@ -1048,6 +1055,10 @@ class Chatbot:
             self.system_prompt = content
 
         return token_count
+
+    @property
+    def conversation_history(self):
+        return self.conversation.history
 
     @property
     def model(self):
@@ -1157,8 +1168,10 @@ class Chatbot:
                     final_token_count = item[1]
                     consolidated_response = item[2]
                     response = {
-                        "message": {"content": consolidated_response["message"]["content"]},
-                        "eval_count": final_token_count
+                        "message": {
+                            "content": consolidated_response["message"]["content"]
+                        },
+                        "eval_count": final_token_count,
                     }
                 else:
                     response_text = item
@@ -1166,7 +1179,9 @@ class Chatbot:
                     yield response_text
 
             if response:
-                self.conversation.add_response(self.client.name, response, streaming=True)
+                self.conversation.add_response(
+                    self.client.name, response, streaming=True
+                )
 
             # yield "\n"
             yield {"message": "\n", "end_of_stream": True}

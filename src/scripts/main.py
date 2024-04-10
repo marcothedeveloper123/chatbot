@@ -1,3 +1,4 @@
+from config import BASE_URL
 from chatbot import Chatbot
 from prompt_toolkit import prompt, ANSI
 from prompt_toolkit.history import InMemoryHistory
@@ -70,12 +71,23 @@ def run_chatbot():
         action="store_true",
         help="Display token counts for system prompt, user input, and conversation history",
     )
+    # argument for "base_url" for OpenAI API. default is empty string
+    parser.add_argument(
+        "-b",
+        "--base-url",
+        type=str,
+        default=BASE_URL,
+        help="Base URL for OpenAI API. Default is empty string.",
+    )
     args = parser.parse_args()
 
     while True:
         try:
             chatbot = Chatbot(
-                system_prompt=args.system, model=args.model, streaming=args.streaming
+                system_prompt=args.system,
+                model=args.model,
+                streaming=args.streaming,
+                base_url=args.base_url,
             )
 
             if chatbot.initial_state == "service_unavailable":
@@ -88,9 +100,7 @@ def run_chatbot():
                     f"{colors['MAGENTA']}The specified model '{args.model}' is not available.\n"
                 )
                 available_models = [
-                    model
-                    for models in chatbot.model_cache.values()
-                    for model in models
+                    model for models in chatbot.model_cache.values() for model in models
                 ]
                 args.model = get_user_model_choice(available_models)
                 print(f"{colors['RESET']}\n")
