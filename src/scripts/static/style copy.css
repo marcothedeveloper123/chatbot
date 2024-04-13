@@ -32,7 +32,7 @@ header {
 	left: 0;
 	right: 0;
 	bottom: 60px;
-	padding: 0.2em 10px;
+	padding: 10px;
 }
 
 #chatbox p {
@@ -56,43 +56,46 @@ header, #inputArea {
 }
 
 #inputArea {
-	bottom: 20px;
-	justify-content: space-between;
-	align-items: center;
-	display: flex; /* Use flexbox */
-  	padding: 10px; /* Consistent padding with the chatbox */
-  	box-sizing: border-box; /* Include padding in width calculation */
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px; /* Same as chatbox for consistent padding */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box; /* Ensures padding is included in the width */
 }
 
 .input-wrapper {
-	display: flex;
-	align-items: flex-end; /* Align items at the bottom */
 	width: 100%;
+	display: flex;
 	position: relative;
+	align-items: flex-end;
 	justify-content: space-between;
 }
 
 #userInput {
-	resize: none; /* Disable manual resizing */
-	overflow-y: hidden; /* Hide the scrollbar */
-	min-height: 20px; /* Minimum height to start with */
-	max-height: 120px; /* Maximum height to avoid covering too much of the chatbox */
-	flex-grow: 1;
-	margin-right: 10px;
-	padding: 8px;
-	border: 1px solid #ccc;
-	border-radius: 4px;
+	resize: none;
+	overflow-y: auto;
+	height: auto;
+	max-height:33vh;
+	flex-grow: 1; /* Allows the input to grow and fill available space */
+	flex-basis: auto;
+	margin-right: 10px; /* Space between the input and the button
+	padding: 8px; /* Padding inside the input for aesthetics */
+	line-height: 1.5;
 	box-sizing: border-box;
+	border: 1px;
+	border-radius: 4px;
+	font-size: 16px;
 }
 
 #sendButton {
-	padding: 8px 15px; /* Adjust padding if needed to match height */
-	flex-shrink: 0; /* Prevent the button from shrinking */
-	border: 1px solid #ccc; /* Adds a border to the button */
-	border-radius: 4px;
-	color: white;
-	cursor: pointer;
-	box-sizing: border-box;
+	padding: 8px 15px; /* Padding inside the button */
+	flex-shrink: 0;
+	align-self: center;
+	position: absolute;
+	right: 3px;
 }
 
 @media (min-width: 768px) { /* This targets screens wider than 768px */
@@ -121,15 +124,12 @@ header, #inputArea {
 .sender-name {
   display: inline-block;
   vertical-align: middle;
-  margin: 0;
-  margin-right: 0.2em;
+  margin-right: 5px;
 }
 
 .message-content {
   display: inline;
   vertical-align: middle;
-  padding: 0.2em 0;
-  margin-top: 0;
 }
 
 .visually-hidden {
@@ -146,43 +146,60 @@ header, #inputArea {
 
 pre, code {
 	position: relative;
-	padding-top: 0.2em;
+	margin-top: 0;
+	padding-top: 0;
 }
 
+/* Basic styles to ensure the toolbar fits well with the rest of the chatbox design */
 .code-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	background-color: #2b2b2b;
-	color: #f8f8f2;
+	background-color: #333;  /* Darker for contrast */
+	color: #fff;
 	padding: 0.5em;
 	width: 100%;
 	box-sizing: border-box;
-	height: 40px; /* Example height, adjust as necessary */
-	border-top-left-radius: 10px;
-	border-top-right-radius: 10px;
-	margin-top: 0;
+	border-radius: 5px 5px 0 0;  /* Rounded top corners */
 }
 
 .language-label, .copy-code-button {
+	flex: 1;  /* Flex grow to fill the toolbar evenly */
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	padding: 0.5em;
 	margin: 0;
-	padding: .7em;
+	border: none;  /* Remove any default browser styling */
 	background: none;
-	border: none;
 	color: inherit;
-	line-height: 1; /* Adjust or remove if it causes alignment issues */
+	font-size: 0.9em;  /* Smaller font size for subtle design */
 }
 
 .copy-code-button {
 	cursor: pointer;
+	background-color: #555;  /* Slightly different background for the button */
+	border-radius: 4px;  /* Rounded corners for the button */
+	color: #ddd;  /* Lighter color for text to stand out */
+	padding: 0.3em 0.6em;  /* Appropriate padding */
+	transition: background-color 0.3s;  /* Smooth transition for hover effect */
 }
 
-.you-message, .chatbot-message {
-	padding: 0;
-	margin: 0;
-	padding-bottom: 0.2em;
-	margin-bottom: 0.2em;
+.copy-code-button:hover {
+	background-color: #777;  /* Lighter on hover for visual feedback */
+}
+
+/* Ensure the pre and code tags are clearly styled */
+pre, code {
+	background-color: #f4f4f4;  /* Light background for readability */
+	color: #333;  /* Dark text for contrast */
+	padding: 0.5em;  /* Padding inside code blocks */
+	border-radius: 0 0 5px 5px;  /* Rounded bottom corners */
+	border: 1px solid #ccc;  /* Subtle border */
+}
+
+/* Styling for the rest of the chatbox for consistency */
+#chatbox {
+	font-family: "Arial", sans-serif;  /* More standard font for code readability */
+	line-height: 1.5;  /* Improved line spacing */
 }

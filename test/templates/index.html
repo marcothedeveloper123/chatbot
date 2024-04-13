@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../static/styles.css">
+<title>Chat Interface</title>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>My Name</h2>
+  <!-- Add navigation items here -->
+</div>
+
+<div class="content">
+  <h1>How can I help you today?</h1>
+  <div id="conversationHistory">
+    <!-- User and Chatbot messages will be displayed here -->
+  </div>
+</div>
+
+<div class="footer">
+  <input type="text" id="messageInput" placeholder="Message ChatGPT...">
+  <button type="button" id="sendButton">Send</button>
+</div>
+
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+<script src="../static/chat.js"></script>
+</body>
+</html>
